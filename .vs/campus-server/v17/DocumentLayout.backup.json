@@ -1,7 +1,48 @@
 {
   "Version": 1,
   "WorkspaceRootPath": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\",
-  "Documents": [],
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\http\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\http\\endpoints\\dosomething.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\endpoints\\dosomething.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\services\\dosomethingmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\services\\dosomethingmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\serviceimplementation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\serviceimplementation.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\protos\\someservice.proto||{3B902123-F8A7-4915-9F01-361F908088D0}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\protos\\someservice.proto||{3B902123-F8A7-4915-9F01-361F908088D0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\someservice\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|c:\\users\\bocai\\onedrive\\desktop\\facultate\\an 3 s1\\is\\campus-server\\http\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    }
+  ],
   "DocumentGroupContainers": [
     {
       "Orientation": 0,
@@ -9,7 +50,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": -1,
+          "SelectedChildIndex": 9,
           "Children": [
             {
               "$type": "Bookmark",
@@ -18,6 +59,136 @@
             {
               "$type": "Bookmark",
               "Name": "ST:129:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "someService.proto",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Protos\\someService.proto",
+              "RelativeDocumentMoniker": "SomeService\\Protos\\someService.proto",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Protos\\someService.proto",
+              "RelativeToolTip": "SomeService\\Protos\\someService.proto",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003853|",
+              "WhenOpened": "2025-11-06T14:26:31.25Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "DoSomething.cs",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Endpoints\\DoSomething.cs",
+              "RelativeDocumentMoniker": "http\\Endpoints\\DoSomething.cs",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Endpoints\\DoSomething.cs",
+              "RelativeToolTip": "http\\Endpoints\\DoSomething.cs",
+              "ViewState": "AgIAAA0AAAAAAAAAAIA4wBQAAAA+AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-06T13:30:43.924Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "DoSomethingMessage.cs",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Services\\DoSomethingMessage.cs",
+              "RelativeDocumentMoniker": "SomeService\\Services\\DoSomethingMessage.cs",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Services\\DoSomethingMessage.cs",
+              "RelativeToolTip": "SomeService\\Services\\DoSomethingMessage.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABUAAABQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-06T13:34:44.703Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\appsettings.json",
+              "RelativeDocumentMoniker": "SomeService\\appsettings.json",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\appsettings.json",
+              "RelativeToolTip": "SomeService\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-06T13:31:13.109Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\appsettings.json",
+              "RelativeDocumentMoniker": "http\\appsettings.json",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\appsettings.json",
+              "RelativeToolTip": "http\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-06T13:30:00.692Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "http\\Properties\\launchSettings.json",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Properties\\launchSettings.json",
+              "RelativeToolTip": "http\\Properties\\launchSettings.json",
+              "ViewState": "AgIAAAMAAAAAAAAAAAAAABsAAAAcAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-06T13:29:17.762Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Program.cs",
+              "RelativeDocumentMoniker": "SomeService\\Program.cs",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Program.cs",
+              "RelativeToolTip": "SomeService\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-06T13:23:25.369Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Program.cs",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Program.cs",
+              "RelativeDocumentMoniker": "http\\Program.cs",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\http\\Program.cs",
+              "RelativeToolTip": "http\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABQAAAAHAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-06T13:26:10.185Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "ServiceImplementation.cs",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\ServiceImplementation.cs",
+              "RelativeDocumentMoniker": "SomeService\\ServiceImplementation.cs",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\ServiceImplementation.cs",
+              "RelativeToolTip": "SomeService\\ServiceImplementation.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-06T14:26:38.719Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "SomeService\\Properties\\launchSettings.json",
+              "ToolTip": "C:\\Users\\bocai\\OneDrive\\Desktop\\facultate\\AN 3 S1\\IS\\campus-server\\SomeService\\Properties\\launchSettings.json",
+              "RelativeToolTip": "SomeService\\Properties\\launchSettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAwAAAAOAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-11-06T13:15:55.094Z",
+              "EditorCaption": ""
             }
           ]
         }

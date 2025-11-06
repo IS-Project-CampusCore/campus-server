@@ -7,22 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FastEndpoints" Version="7.1.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.64.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     <PackageReference Include="Grpc.Tools" Version="2.76.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
-    <ProjectReference Include="..\commons\commons.csproj" />
+    <ProjectReference Include="..\commons\commons.csproj"/>
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\SomeService\Protos\someService.proto" GrpcServices="Client">
-      <Link>Protos\someService.proto</Link>
-    </Protobuf>
+    <Protobuf Include="Protos\someService.proto" GrpcServices="Server" />
   </ItemGroup>
+
 </Project>

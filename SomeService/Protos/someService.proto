@@ -1,0 +1,18 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "someServiceClient";
+
+package someService;
+
+service someService {
+	rpc DoSomething (DoSomethingReq) returns (DoSomethingRes);
+	rpc DoSomethingElse (DoSomethingReq) returns (DoSomethingRes);
+}
+
+message DoSomethingReq{
+	string someReqMessage = 1;
+}
+
+message DoSomethingRes{
+	string someResMessage = 1;
+}
