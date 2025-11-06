@@ -27,7 +27,14 @@ public readonly struct MessageBody
     public MessageBody(JsonElement json) => _json = json;
 
     public readonly string String() => ValidateJsonOrThrow(JsonValueKind.String).ToString();
+    public readonly int Int32() => ValidateJsonOrThrow(JsonValueKind.Number).GetInt32();
+    public readonly JsonElement Object() => ValidateJsonOrThrow(JsonValueKind.Object);
+    public readonly JsonElement.ArrayEnumerator Array() => ValidateJsonOrThrow(JsonValueKind.Array).EnumerateArray();
 
+    public readonly string? TryString() => Validate(JsonValueKind.String) ? _json.GetString() : null;
+    public readonly int? TryInt32() => Validate(JsonValueKind.Number) ? _json.GetInt32() : null;
+    public readonly JsonElement? TryObj() => Validate(JsonValueKind.Object) ? _json : null;
+    public readonly JsonElement.ArrayEnumerator? TryArray() => Validate(JsonValueKind.Array) ? _json.EnumerateArray() : null;
 
     private bool Validate(JsonValueKind kind) => _json.ValueKind == kind;
     private JsonElement ValidateJsonOrThrow(JsonValueKind valueKind)
@@ -38,4 +45,3 @@ public readonly struct MessageBody
         return _json;
     }
 }
-
