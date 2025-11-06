@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using someServiceClient;
 
+AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.ConfigureKestrel(options =>
@@ -23,12 +25,10 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddFastEndpoints();
 builder.Services.AddGrpc();
 
-AppContext.SetSwitch(
-    "System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
-
 builder.Services.AddGrpcClient<someService.someServiceClient>(o =>
 {
-    o.Address = new Uri("http://localhost:5002");
+    string? address = builder.Configuration["GrpcServices:SomeService"];
+    o.Address = new Uri(address!);
 });
 
 var app = builder.Build();
