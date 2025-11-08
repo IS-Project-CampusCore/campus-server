@@ -64,3 +64,5 @@ nunit-*.xml
 *.suo
 *.user
 *.userprefs
+
+/.vs/
