@@ -35,7 +35,7 @@ public class MessageResponse
             Errors = errorMessage
         };
     }
-    public static MessageResponse Unauthenticated(string errorMessage, object? response = null) {
+    public static MessageResponse Unauthorized(string errorMessage, object? response = null) {
             return new MessageResponse
             {
                 Success = false,
@@ -59,7 +59,7 @@ public class MessageResponse
         return new MessageResponse
         {
             Success = false,
-            Code = 500,
+            Code = 404,
             Body = response,
             Errors = errorMessage
         };
