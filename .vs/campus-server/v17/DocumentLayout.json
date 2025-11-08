@@ -100,7 +100,7 @@
               "RelativeDocumentMoniker": "commons\\MessageResponse.cs",
               "ToolTip": "D:\\Proiect Is\\commons\\MessageResponse.cs",
               "RelativeToolTip": "commons\\MessageResponse.cs",
-              "ViewState": "AgIAAGAAAAAAAAAAAAA4wGkAAAABAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAHAAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-06T14:50:14.024Z",
               "EditorCaption": ""
@@ -115,8 +115,7 @@
               "RelativeToolTip": "http\\Endpoints\\DoSomething.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-06T14:39:13.241Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-06T14:39:13.241Z"
             },
             {
               "$type": "Document",
@@ -128,8 +127,7 @@
               "RelativeToolTip": "SomeService\\Services\\DoSomethingMessage.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-06T14:30:23.883Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-06T14:30:23.883Z"
             },
             {
               "$type": "Document",
@@ -141,8 +139,7 @@
               "RelativeToolTip": "http\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-06T13:59:16.308Z",
-              "EditorCaption": ""
+              "WhenOpened": "2025-11-06T13:59:16.308Z"
             },
             {
               "$type": "Document",

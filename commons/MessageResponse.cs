@@ -32,23 +32,29 @@ public readonly struct MessageBody
     public readonly int Int32() => ValidateJsonOrThrow(JsonValueKind.Number).GetInt32();
 
     public readonly MessageBody Object() => new(ValidateJsonOrThrow(JsonValueKind.Object));
+
     public readonly JsonElement Array() => ValidateJsonOrThrow(JsonValueKind.Array);
+
     public readonly string? TryString() => Validate(JsonValueKind.String) ? _json.GetString() : null;
    
     public readonly int? TryInt32() => Validate(JsonValueKind.Number) ? _json.GetInt32() : null;
 
     public readonly MessageBody? TryObj() => Validate(JsonValueKind.Object) ? new(_json) : null;
+
     public readonly JsonElement? TryArray() => Validate(JsonValueKind.Array) ? _json : null;
+
     public readonly string? TryGetString(string property) =>
-        TryGetProperty(property, JsonValueKind.String, out var prop) ? prop.GetString() : null;
+        TryGetProperty(property, JsonValueKind.String) is { } prop ? prop.GetString() : null;
 
     public readonly int? TryGetInt32(string property) =>
-        TryGetProperty(property, JsonValueKind.Number, out var prop) ? prop.GetInt32() : null;
+        TryGetProperty(property, JsonValueKind.Number) is { } prop ? prop.GetInt32() : null;
 
-    public readonly MessageBody? TryGetObject(string property) =>
-        TryGetProperty(property, JsonValueKind.Object, out var prop) ? new(prop) : null;
-    public readonly JsonElement? TryGetArray(string property) =>
-        TryGetProperty(property, JsonValueKind.Array, out var prop) ? prop : null;
+    public readonly MessageBody? TryGetObject(string property) => // Corectat complet
+        TryGetProperty(property, JsonValueKind.Object) is { } prop ? new(prop) : null;
+
+    public readonly JsonElement? TryGetArray(string property) => // Corectat complet
+        TryGetProperty(property, JsonValueKind.Array) is { } prop ? prop : null;
+
     public readonly string GetString(string property) =>
         GetPropertyAndValidate(property, JsonValueKind.String).GetString()!;
 
@@ -60,21 +66,24 @@ public readonly struct MessageBody
 
     public readonly JsonElement GetArray(string property) =>
         GetPropertyAndValidate(property, JsonValueKind.Array);
+
     private readonly JsonElement GetPropertyAndValidate(string propertyName, JsonValueKind expectedKind)
     {
+        JsonElement? propertyElement = TryGetProperty(propertyName);
 
-        if (!TryGetProperty(propertyName, out var propertyElement))
+        if (!propertyElement.HasValue)
         {
             throw new ArgumentException($"Property '{propertyName}' not found on message body object."); 
         }
 
-        if (!ValidateProperty(propertyElement, expectedKind))
+        if (!ValidateProperty(propertyElement.Value, expectedKind))
         {
             throw new ArgumentException($"Property '{propertyName}' is not a valid {expectedKind}."); 
         }
 
-        return propertyElement;
+        return propertyElement.Value;
     }
+
     private readonly JsonElement? TryGetProperty(string propertyName) =>
      _json.ValueKind == JsonValueKind.Object && _json.TryGetProperty(propertyName, out var element)
          ? element
