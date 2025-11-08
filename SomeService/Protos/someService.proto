@@ -1,12 +1,14 @@
 ﻿syntax = "proto3";
 
+import "Protos/common.proto";
+
 option csharp_namespace = "someServiceClient";
 
 package someService;
 
 service someService {
-	rpc DoSomething (DoSomethingReq) returns (DoSomethingRes);
-	rpc DoSomethingElse (DoSomethingReq) returns (DoSomethingRes);
+	rpc DoSomething (DoSomethingReq) returns (commons.protos.ProtoMessageResponse);
+	rpc DoSomethingElse (DoSomethingReq) returns (commons.protos.ProtoMessageResponse);
 }
 
 message DoSomethingReq{

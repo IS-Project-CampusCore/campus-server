@@ -2,11 +2,24 @@ using FastEndpoints;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Serilog;
 using someServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+var seqUrl = builder.Configuration["Logging:SeqUrl"];
+
+builder.Host.UseSerilog((context, config) =>
+{
+    config
+        .MinimumLevel.Information()
+        .Enrich.FromLogContext()
+        .ReadFrom.Configuration(builder.Configuration)
+        .WriteTo.Console()
+        .WriteTo.Seq(seqUrl!);
+});
 
 builder.WebHost.ConfigureKestrel(options =>
 {

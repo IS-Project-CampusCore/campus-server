@@ -1,4 +1,5 @@
-﻿using System;
+﻿using commons.Protos;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -13,6 +14,17 @@ public class MessageResponse
     public int Code { get; set; }
     public object? Body { get; set; }
     public string? Errors { get; set; }
+
+    public static MessageResponse FromProtoMessage(ProtoMessageResponse messageResponse)
+    {
+        return new MessageResponse
+        {
+            Success = messageResponse.Success,
+            Code = messageResponse.Code,
+            Body = messageResponse.Body,
+            Errors = messageResponse.Errors,
+        };
+    }
 }
 
 public readonly struct MessageBody

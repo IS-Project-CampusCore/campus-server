@@ -8,7 +8,7 @@ namespace http.Endpoints;
 public record DoSomethingRequest(string message);
 public record DoSomethingResponse(string message);
 
-public class DoSomething : Endpoint<DoSomethingRequest, DoSomethingResponse>
+public class DoSomething : Endpoint<DoSomethingRequest, MessageResponse>
 {
     public someService.someServiceClient Client { get; set; } = default!;
     public override void Configure()
@@ -18,12 +18,12 @@ public class DoSomething : Endpoint<DoSomethingRequest, DoSomethingResponse>
     }
     public override async Task HandleAsync(DoSomethingRequest request, CancellationToken cancellationToken)
     {
-        DoSomethingResponse res = new DoSomethingResponse("");
+        MessageResponse res = new MessageResponse();
         try
         {
             var apiRes = await Client.DoSomethingAsync(new DoSomethingReq { SomeReqMessage = request.message }, cancellationToken: cancellationToken);
 
-            res = new DoSomethingResponse(apiRes.SomeResMessage);
+            res = MessageResponse.FromProtoMessage(apiRes);
         }
         catch(BadRequestException)
         {

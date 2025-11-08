@@ -1,0 +1,14 @@
+﻿syntax = "proto3";
+
+import "google/protobuf/any.proto";
+
+option csharp_namespace = "commons.Protos";
+
+package commons.protos;
+
+message ProtoMessageResponse {
+	bool success = 1;
+	int32 code = 2;
+	optional google.protobuf.Any body = 3;
+	optional string errors = 4;
+}
