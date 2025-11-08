@@ -1,40 +1,18 @@
-﻿using commons.Protos;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
+﻿using System.Text.Json;
 
-namespace commons;
+namespace commons.Protos;
 
-public class MessageResponse
+public partial class MessageResponse
 {
-    public bool Success { get; set; }
-    public int Code { get; set; }
-    public object? Body { get; set; }
-    public string? Errors { get; set; }
+    public MessageBody GetBody() => StringToMessageBody(Body);
 
-    public static MessageResponse FromProtoMessage(ProtoMessageResponse messageResponse)
-    {
-        return new MessageResponse
-        {
-            Success = messageResponse.Success,
-            Code = messageResponse.Code,
-            Body = messageResponse.Body,
-            Errors = messageResponse.Errors,
-        };
-    }
-
-    public static MessageResponse Ok (object? response = null)
+    public static MessageResponse Ok(object? response = null)
     {
         return new MessageResponse
         {
             Success = true,
             Code = 200,
-            Body = response,
-            Errors = null
+            Body = BodyToString(response),
         };
     }
     public static MessageResponse BadRequest(string errorMessage, object? response = null)
@@ -43,25 +21,28 @@ public class MessageResponse
         {
             Success = false,
             Code = 400,
-            Body = response,
+            Body = BodyToString(response),
             Errors = errorMessage
         };
     }
-    public static MessageResponse Unauthorized(string errorMessage, object? response = null) {
-            return new MessageResponse
-            {
-                Success = false,
-                Code = 401,
-                Body = response,
-                Errors = errorMessage
-            };
-        }
-    public static MessageResponse Forbidden(string errorMessage, object? response = null) {
+    public static MessageResponse Unauthorized(string errorMessage, object? response = null)
+    {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 401,
+            Body = BodyToString(response),
+            Errors = errorMessage
+        };
+    }
+
+    public static MessageResponse Forbidden(string errorMessage, object? response = null)
+    {
         return new MessageResponse
         {
             Success = false,
             Code = 403,
-            Body = response,
+            Body = BodyToString(response),
             Errors = errorMessage
         };
     }
@@ -72,7 +53,7 @@ public class MessageResponse
         {
             Success = false,
             Code = 404,
-            Body = response,
+            Body = BodyToString(response),
             Errors = errorMessage
         };
     }
@@ -83,10 +64,11 @@ public class MessageResponse
         {
             Success = false,
             Code = 500,
-            Body = response,
+            Body = BodyToString(response),
             Errors = errorMessage
         };
     }
+
     public static MessageResponse Error(Exception ex)
     {
         return new MessageResponse
@@ -98,6 +80,11 @@ public class MessageResponse
         };
     }
 
+    public static string BodyToString(MessageBody body) => body.Json.ToString();
+
+    public static string BodyToString(object? body) => body is string ? (string)body : JsonSerializer.Serialize(body);
+
+    public static MessageBody StringToMessageBody(string jsonBody) => new(JsonDocument.Parse(jsonBody).RootElement);
 }
 
 public readonly struct MessageBody

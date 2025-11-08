@@ -26,7 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\commons\Protos\common.proto" ProtoRoot=".." GrpcServices="None" Link="Protos\common.proto" />
     
     <Protobuf Include="Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="Server"/>
   </ItemGroup>

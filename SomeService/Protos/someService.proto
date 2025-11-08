@@ -7,8 +7,8 @@ option csharp_namespace = "someServiceClient";
 package someService;
 
 service someService {
-	rpc DoSomething (DoSomethingReq) returns (commons.protos.ProtoMessageResponse);
-	rpc DoSomethingElse (DoSomethingReq) returns (commons.protos.ProtoMessageResponse);
+	rpc DoSomething (DoSomethingReq) returns (commons.protos.MessageResponse);
+	rpc DoSomethingElse (DoSomethingReq) returns (commons.protos.MessageResponse);
 }
 
 message DoSomethingReq{

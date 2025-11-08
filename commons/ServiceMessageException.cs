@@ -1,17 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Grpc.AspNetCore;
-using Grpc.Core;
+﻿using commons.Protos;
 
 
 namespace commons;
 
-public class ServiceMessageException(StatusCode statusCode, string message) : RpcException(new Status(statusCode, message), message);
+public class ServiceMessageException(string msg, ServiceMessageException.MessageResponseDelegate generator) : Exception(msg)
+{
+    public delegate MessageResponse MessageResponseDelegate(string msg, object? obj = null);
+    private readonly MessageResponseDelegate _generator = generator;
 
-public class BadRequestException(string message) : ServiceMessageException(StatusCode.InvalidArgument, message);
-public class UnauthorizedException(string message) : ServiceMessageException(StatusCode.Unauthenticated, message);
-public class ForbiddenException(string message) : ServiceMessageException(StatusCode.PermissionDenied, message);
-public class InternalErrorException(string message) : ServiceMessageException(StatusCode.Internal, message);
+    public virtual MessageResponse ToResponse() => _generator(Message);
+};
+
+public class BadRequestException(string msg) : ServiceMessageException(msg, MessageResponse.BadRequest);
+public class UnauthorizedException(string msg) : ServiceMessageException(msg, MessageResponse.Unauthorized);
+public class ForbiddenException(string msg) : ServiceMessageException(msg, MessageResponse.Forbidden);
+public class NotFoundException(string msg) : ServiceMessageException(msg, MessageResponse.NotFound);
+public class InternalErrorException(string msg) : ServiceMessageException(msg, MessageResponse.Error);
