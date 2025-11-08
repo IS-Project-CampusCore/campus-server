@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -13,6 +14,78 @@ public class MessageResponse
     public int Code { get; set; }
     public object? Body { get; set; }
     public string? Errors { get; set; }
+
+    public static MessageResponse Ok (object? response = null)
+    {
+        return new MessageResponse
+        {
+            Success = true,
+            Code = 200,
+            Body = response,
+            Errors = null
+        };
+    }
+    public static MessageResponse BadRequest(string errorMessage, object? response = null)
+    {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 400,
+            Body = response,
+            Errors = errorMessage
+        };
+    }
+    public static MessageResponse Unauthenticated(string errorMessage, object? response = null) {
+            return new MessageResponse
+            {
+                Success = false,
+                Code = 401,
+                Body = response,
+                Errors = errorMessage
+            };
+        }
+    public static MessageResponse Forbidden(string errorMessage, object? response = null) {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 403,
+            Body = response,
+            Errors = errorMessage
+        };
+    }
+
+    public static MessageResponse NotFound(string errorMessage, object? response = null)
+    {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 500,
+            Body = response,
+            Errors = errorMessage
+        };
+    }
+
+    public static MessageResponse Error(string errorMessage, object? response = null)
+    {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 500,
+            Body = response,
+            Errors = errorMessage
+        };
+    }
+    public static MessageResponse Error(Exception ex)
+    {
+        return new MessageResponse
+        {
+            Success = false,
+            Code = 500,
+            Body = null,
+            Errors = ex.Message
+        };
+    }
+
 }
 
 public readonly struct MessageBody
