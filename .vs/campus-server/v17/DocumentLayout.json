@@ -7,6 +7,10 @@
       "RelativeMoniker": "D:0:0:{2FF18291-28E3-4771-8DA5-597B0FFD2CF3}|commons\\commons.csproj|solutionrelative:commons\\messageresponse.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
+      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|d:\\proiect is\\http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|d:\\proiect is\\someservice\\services\\dosomethingmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{18525A8E-C22D-4030-912E-9E7F08B08D06}|SomeService\\SomeService.csproj|solutionrelative:someservice\\services\\dosomethingmessage.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
@@ -21,10 +25,6 @@
     {
       "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|d:\\proiect is\\http\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|d:\\proiect is\\http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{80F3F3C5-4D50-4BF3-92D3-4891EA7EA539}|http\\http.csproj|solutionrelative:http\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{2FF18291-28E3-4771-8DA5-597B0FFD2CF3}|commons\\commons.csproj|d:\\proiect is\\commons\\servicemessageexception.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
@@ -70,7 +70,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 4,
               "Title": "ServiceImplementation.cs",
               "DocumentMoniker": "D:\\Proiect Is\\SomeService\\ServiceImplementation.cs",
               "RelativeDocumentMoniker": "SomeService\\ServiceImplementation.cs",
@@ -100,14 +100,14 @@
               "RelativeDocumentMoniker": "commons\\MessageResponse.cs",
               "ToolTip": "D:\\Proiect Is\\commons\\MessageResponse.cs",
               "RelativeToolTip": "commons\\MessageResponse.cs",
-              "ViewState": "AgIAAB8AAAAAAAAAAAA7wDAAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAAGAAAAAAAAAAAAA4wGkAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-06T14:50:14.024Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 3,
               "Title": "DoSomething.cs",
               "DocumentMoniker": "D:\\Proiect Is\\http\\Endpoints\\DoSomething.cs",
               "RelativeDocumentMoniker": "http\\Endpoints\\DoSomething.cs",
@@ -115,11 +115,12 @@
               "RelativeToolTip": "http\\Endpoints\\DoSomething.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAAiAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-06T14:39:13.241Z"
+              "WhenOpened": "2025-11-06T14:39:13.241Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 2,
               "Title": "DoSomethingMessage.cs",
               "DocumentMoniker": "D:\\Proiect Is\\SomeService\\Services\\DoSomethingMessage.cs",
               "RelativeDocumentMoniker": "SomeService\\Services\\DoSomethingMessage.cs",
@@ -127,11 +128,12 @@
               "RelativeToolTip": "SomeService\\Services\\DoSomethingMessage.cs",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-11-06T14:30:23.883Z"
+              "WhenOpened": "2025-11-06T14:30:23.883Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 1,
               "Title": "appsettings.json",
               "DocumentMoniker": "D:\\Proiect Is\\http\\appsettings.json",
               "RelativeDocumentMoniker": "http\\appsettings.json",
@@ -139,11 +141,12 @@
               "RelativeToolTip": "http\\appsettings.json",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAeAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-11-06T13:59:16.308Z"
+              "WhenOpened": "2025-11-06T13:59:16.308Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "Program.cs",
               "DocumentMoniker": "D:\\Proiect Is\\http\\Program.cs",
               "RelativeDocumentMoniker": "http\\Program.cs",
