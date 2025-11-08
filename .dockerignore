@@ -1,0 +1,7 @@
+# Exclude bin and obj directories, which are build artifacts
+**/[Bb]in/
+**/[Oo]bj/
+
+**/Dockerfile 
+**/docker-compose.yml 
+**/.dockerignore

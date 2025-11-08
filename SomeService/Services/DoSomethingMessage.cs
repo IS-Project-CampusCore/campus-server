@@ -11,18 +11,23 @@ public class DoSomethingMessage(ServiceImplementation implementation,ILogger<DoS
 
     public override Task<DoSomethingRes> DoSomething(DoSomethingReq request, ServerCallContext context)
     {
-        DoSomethingRes doSomethingRes = new DoSomethingRes();
+        _logger.LogInformation($"{nameof(DoSomethingMessage)} has begun");
 
+        DoSomethingRes response = new DoSomethingRes();
+
+        _logger.LogInformation($"{nameof(DoSomethingMessage)} Request: {nameof(DoSomethingReq)}={request.ToString()}");
         try
         {
-            doSomethingRes.SomeResMessage = _serviceImplementation.ProcessMessage(request.SomeReqMessage);
+            response.SomeResMessage = _serviceImplementation.ProcessMessage(request.SomeReqMessage);
+            _logger.LogInformation($"The request has been processed succesffuly: Response: {nameof(DoSomethingRes)}={response.ToString()}");
         }
         catch (ServiceMessageException ex)
         {
-            doSomethingRes = new DoSomethingRes { SomeResMessage = ex.Message };
-            return Task.FromResult(doSomethingRes);
+            response = new DoSomethingRes { SomeResMessage = ex.Message };
+            _logger.LogError($"The request has failled with error: {ex.Message}");
+            return Task.FromResult(response);
         }
 
-        return Task.FromResult(doSomethingRes);
+        return Task.FromResult(response);
     }
 }
