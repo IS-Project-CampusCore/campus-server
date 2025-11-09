@@ -122,10 +122,10 @@ public readonly struct MessageBody
     public readonly int? TryGetInt32(string property) =>
         TryGetProperty(property, JsonValueKind.Number) is { } prop ? prop.GetInt32() : null;
 
-    public readonly MessageBody? TryGetObject(string property) => // Corectat complet
+    public readonly MessageBody? TryGetObject(string property) => 
         TryGetProperty(property, JsonValueKind.Object) is { } prop ? new(prop) : null;
 
-    public readonly JsonElement? TryGetArray(string property) => // Corectat complet
+    public readonly JsonElement? TryGetArray(string property) => 
         TryGetProperty(property, JsonValueKind.Array) is { } prop ? prop : null;
 
     public readonly string GetString(string property) =>
