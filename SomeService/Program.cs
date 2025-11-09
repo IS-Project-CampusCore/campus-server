@@ -1,10 +1,9 @@
-using Grpc.Net;
-using Grpc.Net.Client;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using SomeService;
 using SomeService.Services;
 using System.Net;
+using commons;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -28,9 +27,13 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-builder.Services.AddGrpc();
-
+builder.Services.AddScoped<ServiceInterceptor>();
 builder.Services.AddSingleton<ServiceImplementation>();
+
+builder.Services.AddGrpc(options =>
+{
+    options.Interceptors.Add<ServiceInterceptor>();
+});
 
 var app = builder.Build();
 

@@ -12,8 +12,14 @@ services:
       # can be reached just by its name.
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__SomeService=http://someservice:8080
+      - Logging__SeqUrl=http://seq
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      - Logging__LogLevel__System.Net.Http=Warning
+      - Logging__LogLevel__Grpc=Warnin
     depends_on:
       - someservice # Tells Docker to start someservice *before* this one
+      - seq
 
   # This is your 'someService' gRPC service
   someservice:
@@ -21,6 +27,20 @@ services:
       context: .  # Path to the SomeService Dockerfile
       dockerfile: ./SomeService/Dockerfile
     ports:
-      - "8081:8080" # Map your computer's port 8081 (to avoid conflict)
+      - "8083:8080" # Map your computer's port 8081 (to avoid conflict)
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+      - Logging__LogLevel__Default=Information
+      - Logging__LogLevel__Microsoft.AspNetCore=Warning
+      - Logging__LogLevel__System.Net.Http=Warning
+      - Logging__LogLevel__Grpc=Warnin
+    depends_on:
+      - seq
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - "5342:80"   # Expose the Seq UI on your computer at port 5341
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true

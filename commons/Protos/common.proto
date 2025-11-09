@@ -1,0 +1,12 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "commons.Protos";
+
+package commons.protos;
+
+message MessageResponse {
+	bool success = 1;
+	int32 code = 2;
+	optional string body = 3;
+	optional string errors = 4;
+}
