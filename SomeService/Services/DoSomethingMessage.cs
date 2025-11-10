@@ -2,7 +2,6 @@
 using commons.Protos;
 using Grpc.Core;
 using someServiceClient;
-using Google.Protobuf.WellKnownTypes;
 
 namespace SomeService.Services;
 
