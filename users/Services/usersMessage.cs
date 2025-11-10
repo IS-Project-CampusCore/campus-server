@@ -1,16 +1,15 @@
 ﻿using Grpc.Core;
-using MyGrpcService.Protos;
+using usersServiceClient;
 using commons;
 using commons.Protos;
-using Google.Protobuf.WellKnownTypes;
 
-namespace MyGrpcService.Services;
+namespace users.Services;
 
-public class MyGrpcServiceMessage : MyGrpcService.MyGrpcServiceBase
+public class usersMessage : usersService.usersServiceBase
 {
-    private readonly ILogger<MyGrpcServiceMessage> _logger;
+    private readonly ILogger<usersMessage> _logger;
 
-    public MyGrpcServiceMessage(ILogger<MyGrpcServiceMessage> logger)
+    public usersMessage(ILogger<usersMessage> logger)
     {
         _logger = logger;
     }
@@ -29,7 +28,6 @@ public class MyGrpcServiceMessage : MyGrpcService.MyGrpcServiceBase
             ResponseMessage = "You sent: " + request.Message
         };
 
-        // Use the helper from your 'commons' project to pack the response
-        return Task.FromResult(ProtoMessageResponse.Ok(responseBody));
+        return Task.FromResult(MessageResponse.Ok(responseBody));
     }
 }

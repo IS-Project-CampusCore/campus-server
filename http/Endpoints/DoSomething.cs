@@ -3,6 +3,7 @@ using commons.Protos;
 using FastEndpoints;
 using Grpc.Net.Client;
 using someServiceClient;
+using usersServiceClient;
 
 namespace http.Endpoints;
 
@@ -12,6 +13,7 @@ public record DoSomethingResponse(string message);
 public class DoSomething : Endpoint<DoSomethingRequest, string>
 {
     public someService.someServiceClient Client { get; set; } = default!;
+    public usersService.usersServiceClient Client2 { get; set; } = default!;
     public override void Configure()
     {
         Post("api/do-something");
@@ -22,7 +24,7 @@ public class DoSomething : Endpoint<DoSomethingRequest, string>
         MessageResponse apiRes = MessageResponse.Error("Unknow error");
         try
         {
-            apiRes = await Client.DoSomethingAsync(new DoSomethingReq { SomeReqMessage = request.message }, cancellationToken: cancellationToken);
+            apiRes = await Client2.DoSomethingAsync(new MyMessageRequest { Message = request.message }, cancellationToken: cancellationToken);
         }
         catch(BadRequestException)
         {

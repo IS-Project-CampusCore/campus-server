@@ -1,0 +1,22 @@
+﻿syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "MyGrpcServiceServiceClient";
+
+package MyGrpcServiceService;
+
+service MyGrpcServiceService
+{ 
+    rpc DoSomething (MyMessageRequest) returns (commons.protos.MessageResponse);
+}
+
+message MyMessageRequest
+{
+  string message = 1;
+}
+
+message MyMessageResponse
+{
+  string responseMessage = 1;
+}

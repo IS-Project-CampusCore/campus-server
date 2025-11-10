@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Serilog;
 using someServiceClient;
+using usersServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -41,6 +42,12 @@ builder.Services.AddGrpc();
 builder.Services.AddGrpcClient<someService.someServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:SomeService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:UsersService"];
     o.Address = new Uri(address!);
 });
 

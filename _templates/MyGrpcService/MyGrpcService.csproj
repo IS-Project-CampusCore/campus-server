@@ -8,7 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.64.0" />
+    <None Include="Services\MyGrpcServiceMessage.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     <PackageReference Include="Grpc.Tools" Version="2.76.0">
@@ -25,11 +29,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\commons\commons.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Protobuf Include="Protos\mygrpcservice.proto" AdditionalImportDirs="../commons" GrpcServices="Server" ProtoRoot="Protos\" />
+    <Protobuf Include="Protos\MyGrpcServiceService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

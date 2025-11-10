@@ -1,0 +1,22 @@
+﻿syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "usersServiceClient";
+
+package usersService;
+
+service usersService
+{ 
+    rpc DoSomething (MyMessageRequest) returns (commons.protos.MessageResponse);
+}
+
+message MyMessageRequest
+{
+  string message = 1;
+}
+
+message MyMessageResponse
+{
+  string responseMessage = 1;
+}

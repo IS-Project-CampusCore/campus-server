@@ -1,53 +1,66 @@
+# ---
+# SCRIPT: add-service.ps1
+# 
+# This script automates adding a new gRPC service to the solution.
+# It calls the 'grpcservice' template and then patches all
+# docker-compose and Dockerfile files to integrate the new service.
+#
+# USAGE:
+# ./add-service.ps1 -ServiceName MyNewService
+# ---
+
 param (
     [Parameter(Mandatory=$true)]
     [string]$ServiceName
 )
 
-Write-Host "--- 1. Creating new service: $ServiceName ---"
-# Step 1: Run the template. This creates the folder and adds to .sln
+Write-Host "--- 1. Creating new service '$ServiceName' from template ---" -ForegroundColor Green
+
+# Find the solution file automatically
+$solutionFile = Get-ChildItem -Path . -Filter *.sln | Select-Object -First 1
+if (-not $solutionFile) {
+    Write-Host "Error: No .sln file found in the current directory." -ForegroundColor Red
+    return
+}
+
+# Run the 'grpcservice' template
+# The template itself will add the project to the solution via its post-action
 dotnet new grpcservice --name $ServiceName -o $ServiceName
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: Failed to create new service from template."
-    exit 1
+    Write-Host "Error: 'dotnet new' command failed. Make sure the 'grpcservice' template is installed." -ForegroundColor Red
+    return
 }
-Write-Host "Successfully created service and added to solution."
-Write-Host ""
 
-
-# --- Step 2: Update all Dockerfiles ---
-Write-Host "--- 2. Updating all Dockerfiles ---"
-$dockerfiles = Get-ChildItem -Path . -Filter Dockerfile -Recurse
-
-# These are the lines to inject into every Dockerfile
-$newCopyLine = "COPY $ServiceName/$ServiceName.csproj ./$ServiceName/"
-$newRestoreLine = "RUN dotnet restore $ServiceName/$ServiceName.csproj"
-
-foreach ($file in $dockerfiles) {
-    Write-Host "Patching $($file.FullName)..."
-    $content = Get-Content $file.FullName -Raw
-    
-    # Inject the new lines into the restore sections
-    $content = $content -replace '(# --- END DYNAMIC RESTORE ---)', "`t$newCopyLine`n$1"
-    $content = $content -replace '(# --- END DYNAMIC RESTORE RUN ---)', "`t$newRestoreLine`n$1"
-    
-    Set-Content -Path $file.FullName -Value $content
+# --- Step 2: Add project to the solution (Reliable way) ---
+Write-Host "--- 2. Adding new project to solution '$($solutionFile.Name)' ---" -ForegroundColor Green
+$projectPath = Join-Path -Path $ServiceName -ChildPath "$ServiceName.csproj"
+dotnet sln $solutionFile.Name add $projectPath
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Error: 'dotnet sln add' command failed." -ForegroundColor Red
+    return
 }
-Write-Host "All Dockerfiles patched."
-Write-Host ""
 
 
 # --- Step 3: Update docker-compose.yml ---
-Write-Host "--- 3. Updating docker-compose.yml ---"
+Write-Host "--- 3. Updating docker-compose.yml ---" -ForegroundColor Green
 $composeFile = "./docker-compose.yml"
 $composeContent = Get-Content $composeFile -Raw
 
-# Find the highest port used by a service (e.g., 8080, 8083)
-$regex = [regex]'- "(\d+):8080"'
+# Robust regex to find all external ports (e.g., "8080:8080", '8083:8080', "5342:80")
+$regex = [regex]'\-\s*["'']?(\d+):\d+["'']?'
 $matches = $regex.Matches($composeContent)
-$highestPort = $matches | ForEach-Object { [int]$_.Groups[1].Value } | Sort-Object -Descending | Select-Object -First 1
 
-if (-not $highestPort) {
-    $highestPort = 8080 # Default if none found
+$portList = $matches | ForEach-Object { [int]$_.Groups[1].Value }
+
+$highestPort = 0
+if ($portList) {
+    # Sort the list and get the highest number
+    $highestPort = $portList | Sort-Object -Descending | Select-Object -First 1
+}
+
+# If no ports are found at all, default to 8080
+if ($highestPort -lt 8080) {
+    $highestPort = 8080
 }
 
 $newPort = $highestPort + 1
@@ -56,12 +69,12 @@ $serviceNameLower = $ServiceName.ToLower()
 # Define the new service block
 $newServiceBlock = @"
 
-  $serviceNameLower:
+  ${serviceNameLower}:
     build:
       context: .
       dockerfile: ./$ServiceName/Dockerfile
     ports:
-      - "$newPort:8080"
+      - "${newPort}:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
@@ -69,11 +82,19 @@ $newServiceBlock = @"
       - seq
 "@
 
-# Append the new service to the end of the file
+# Append the new block to the docker-compose file
 Add-Content -Path $composeFile -Value $newServiceBlock
-Write-Host "Added $ServiceName to docker-compose.yml on port $newPort."
+Write-Host "Added '$serviceNameLower' to docker-compose.yml on port $newPort."
+
+
+# --- Step 4: Final Manual Steps ---
+Write-Host "--- 4. SCRIPT COMPLETE ---" -ForegroundColor Green
 Write-Host ""
-Write-Host "--- DONE ---"
-Write-Host "Next steps:"
-Write-Host "1. (Manual) Open '$ServiceName.csproj' and add any gRPC Client <ProjectReference> lines if it needs to call other services."
-Write-Host "2. Run 'docker compose up --build'"
+Write-Host "There are a few manual steps left:" -ForegroundColor Yellow
+Write-Host " 1. Update 'commons.csproj' to include this new .proto file."
+Write-Host ""
+Write-Host " 2. Update 'http.csproj' (and any other client) to be able to call this service:"
+Write-Host "    - Add a new <Protobuf ... /> item to 'http.csproj' for the new proto file."
+Write-Host "    - Add the new client to 'Program.cs' with 'builder.Services.AddGrpcClient<...>()'"
+Write-Host ""
+Write-Host "Done."
