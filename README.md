@@ -122,4 +122,29 @@ This design uses an atypical gRPC communication design with a *common response m
 
 For each service message the response is common and it is defined in ``````. The reasons behind this implementation are:
 * **Better message agregation**: Because the services needs to communicate with eachother and aggregate their responses to other services and the API Gateway this design makes the communication easier.
-* **Better error handling**: 
+* **Better error handling**: Because all the messages returns the same response this simplify the error handling process and error response just by using ```ServiceMessageException.cs```.
+
+This common respons is defined in ```common.proto``` and ```MessageResponse.cs``` and is structured as below:
+```
+message MessageResponse {
+	bool success = 1;
+	int32 code = 2;
+	optional string body = 3;
+	optional string errors = 4;
+}
+```
+This message has a direct translation to a **C# class** named MessageResponse.cs that contains some crucial static methods for the communication:
+```
+public static MessageResponse Ok(object? response = null);
+public static MessageResponse BadRequest(string errorMessage, object? response = null);
+public static MessageResponse Unauthorized(string errorMessage, object? response = null);
+public static MessageResponse Forbidden(string errorMessage, object? response = null);
+public static MessageResponse NotFound(string errorMessage, object? response = null);
+public static MessageResponse Error(string errorMessage, object? response = null);
+public static MessageResponse Error(Exception ex);
+```
+* Each of the above methods returns a MessageResponse object that has:
+  1. **Success flag**: if the message executed successfully and the Status Code is Ok(200).
+  2. **Code**: the returned Status Code of the message.
+  3. **Body**: a MessageBody property that has the response body if there is one.
+  4. **Errors**: if the message
