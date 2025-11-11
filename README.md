@@ -8,7 +8,7 @@ This repo contains the server architecture and business logic of CampusCore App 
 
 //TO BE ADDED AFTER PROJECT IS FINISHED
 
-## Development & Debuging
+## Development & Debugging
 
 ### Prerequirements
 
@@ -19,3 +19,107 @@ This repo contains the server architecture and business logic of CampusCore App 
    git clone https://github.com/IS-Project-CampusCore/campus-server.git
    ```
 
+### Run the Server
+
+#### 1. Run each service manually
+
+1. Open the project solution with Visual Studio.
+2. Select the service you want to run form **Startup Item Menu** and run it with **http**.
+3. A console will open and will contain all logs.
+
+#### 2. Run entire server with Docker
+
+1. Start **Docker Desktop**. Ensure you have a working network connection.
+2. Open the project solution with Visual Studio.
+3. Form **Startup Item Menu** select **docker-compose** and run. Wait for the docker image to be build.
+4. Serilog console will open in Visual Studio inside **Containers Window** in *Logs section*.
+
+#### 3. Run entire server from Console
+
+1. Start **Docker Desktop**. Ensure you have a working network connection.
+2. Run docker-compose inside Cmd or PowerShell with:
+   ```
+   docker compose up --build
+   ```
+3. In case of any errors or build fails, take the docker image down using:
+   ```
+   docker compose down
+   ```
+
+### Debugging with Visual Studio
+
+Like any other project you can debug it inside Visaul Studio GUI.
+
+### Create new Services
+
+Services are added automatically using a simple template that respects the overall project architecture. See **Architecture** section inside this file.
+
+#### 1. Install Service Template
+
+* Inside the root directory you can find ```_templates``` subdirectory. If this is the first time you add a new service, be sure you run this command first:
+   ```
+   dotnet new install ./_templates/MyGrpcService
+   ```
+* If the template format was updated, you need to uninstall the old tamplate and install the new one, use those commands:
+   ```
+   dotnet new install ./_templates/MyGrpcService
+   dotnet new uninstall ./_templates/MyGrpcService
+   ```
+   **Or**
+   ```
+   dotnet new install ./_templates/MyGrpcService --force
+   ```
+
+Now the template has the latest version and can used to create a new service
+
+#### 2. Add new Services
+
+To add a new service to this project you need to run this command inside PowerShell from the root directory:
+```
+./add-service.ps1 -ServiceName YourNewServiceName
+```
+
+This script automates the service creation process and integration by doing those operations:
+1. Creates a new service with the name argument.
+2. Automatically adds the new service inside the ```.sln``` file.
+3. Updates the ```docker-compose.yml``` file with the new service section.
+4. For the service to be usefull you would need to do some manual steps(*this steps are explained in console after the script complets*).
+
+After the script runned succesfully you have your new service inside the project and can be used for implementation.
+
+### Server Architecture
+
+This service uses a Microservices architecture structured as an API Gateway(http service) and API(the rest of services).
+
+#### 1. API Gateway Structure
+
+The **http service** aggregrates all the HTTP enpoints and expose them to the client app.
+It uses *HTTP1.1 Requests* for Client-to-Server communication and *HTTP2** for Service-to-Service communication.
+
+##### 1. Client-to-Server communication
+
+* As explained above, this communication uses **HTTP1.1** for *REST API* requests.
+* This project uses **FastEndpoints NuGet Packedge** for the endpoints aggregation.
+* It has a **JWT Bearer Token** schema for secure requests authentication.
+
+* For debuging and testing the API Gateway you can use any API tasting tool like *Postman* or *Insomnia*.
+
+##### 2. Service-to-Service communication
+
+* The API Gateway does not expose any **gRPC Servers**, it is designed to be a **gRPC Client** for every service that has an endpoint implemented.
+* For more information about the actual communication design and implementation go to **gRPC Communication section**.
+
+#### 2. API Structure
+
+The API is composed from multiple **Microservices** with a **gRPC Communication** design.
+It uses *HTTP2* for Service-to-Service communication exposing a **gRPC Server** for each service and uses **gRPC Clients** to call other services.
+
+#### 3. gRPC Communication Design
+
+This design uses an atypical gRPC communication design with a *common response message* 
+
+##### 1. Common Messages Response
+
+For each service message the response is common and it is defined in ``````. The reasons behind this implementation are:
+* **Better message agregation**: Because the services needs to communicate with eachother and aggregate their responses to other services and the API Gateway this design makes the communication easier.
+* **Better error handling**: 
