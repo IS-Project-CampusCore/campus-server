@@ -144,7 +144,19 @@ public static MessageResponse Error(string errorMessage, object? response = null
 public static MessageResponse Error(Exception ex);
 ```
 * Each of the above methods returns a MessageResponse object that has:
-  1. **Success flag**: if the message executed successfully and the Status Code is Ok(200).
-  2. **Code**: the returned Status Code of the message.
-  3. **Body**: a MessageBody property that has the response body if there is one.
-  4. **Errors**: if the message
+1. **Success flag**: if the message executed successfully and the Status Code is Ok(200).
+2. **Code**: the returned Status Code of the message.
+3. **Body**: a MessageBody property that has the response body if there is one.
+4. **Errors**: if the message has returned with an error.
+
+* The MessageResponse body is a MessageBody property that works like a wrapper for JsonElement and implements methods for getting the data out in different types.
+
+##### 2. Communication path
+
+The communication path is show in the below diagram:
+
+<img width="861" height="561" alt="CommunicationDiagram drawio (1)" src="https://github.com/user-attachments/assets/a38e172a-1e27-4329-8ead-cc170f1757dc" />
+
+* This communication represent the data path for between API Gataway and API, it also represents a simple two service communication and the ServiceInterceptor role as a middle ware system.
+
+
