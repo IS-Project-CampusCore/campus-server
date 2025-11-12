@@ -58,3 +58,14 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+  email:
+    build:
+      context: .
+      dockerfile: ./email/Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
