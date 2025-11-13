@@ -30,7 +30,7 @@ builder.Services.AddGrpc(options =>
     options.Interceptors.Add<ServiceInterceptor>();
 });
 builder.Services.AddScoped<ServiceInterceptor>();
-
+builder.Services.AddHttpClient();
 var app = builder.Build();
 
 app.MapGrpcService<emailMessage>();

@@ -8,15 +8,15 @@ package emailService;
 
 service emailService
 { 
-    rpc DoSomething (MyMessageRequest) returns (commons.protos.MessageResponse);
+    rpc SendEmail (SendEmailRequest) returns (commons.protos.MessageResponse);
 }
 
-message MyMessageRequest
-{
-  string message = 1;
-}
 
-message MyMessageResponse
+
+message SendEmailRequest
 {
-  string responseMessage = 1;
+     string to_email = 1;
+    string to_name = 2;      
+    string subject = 3;
+    string html_content = 4;
 }
