@@ -159,4 +159,9 @@ The communication path is show in the below diagram:
 
 * This communication represent the data path for between API Gataway and API, it also represents a simple two service communication and the ServiceInterceptor role as a middle ware system.
 
+##### 3. Use-case Diagram
+
+The actors and the use cases are sown in the diagram below:
+
+<img width="1688" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/d74d6794-4105-4ef2-98b6-a0a764dd13d2" />
 
