@@ -32,4 +32,8 @@
     <Protobuf Include="Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Model\" />
+  </ItemGroup>
+
 </Project>
