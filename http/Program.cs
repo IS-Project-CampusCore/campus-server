@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Serilog;
 using someServiceClient;
 using usersServiceClient;
+using excelServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -48,6 +49,12 @@ builder.Services.AddGrpcClient<someService.someServiceClient>(o =>
 builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:UsersService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<excelServiceClient.excelService.excelServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:ExcelService"];
     o.Address = new Uri(address!);
 });
 

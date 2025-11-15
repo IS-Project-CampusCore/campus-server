@@ -29,6 +29,7 @@
   <ItemGroup>
     <Protobuf Include="..\SomeService\Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="client"/>
     <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="client"/>
+    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="client"/>
   </ItemGroup>
 
 </Project>
