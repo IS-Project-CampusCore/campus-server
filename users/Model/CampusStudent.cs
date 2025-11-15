@@ -1,8 +1,4 @@
-public record CampusStudent: Student
-{
-    string campusNr;
-    string roomNr;
-    public CampusStudent
+ public record CampusStudent
         (string id,
         string name,
         string email,
@@ -14,17 +10,4 @@ public record CampusStudent: Student
         string major,
         string campusNr, 
         string roomNr
-        )
-        {
-        Id= id; 
-        Name = name;
-        Email = email; 
-        PasswordHash = passwordHash;
-        IsVerified = isVerified;
-        Year = year;
-        Group = group;
-        Major = major;
-        this.campusNr = campusNr;
-        this.roomNr = roomNr;
-        }
-}
+        ): Student(id,name,email,passwordHash,isVerified,university,year,group,major);
