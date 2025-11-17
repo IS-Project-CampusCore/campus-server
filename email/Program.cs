@@ -1,8 +1,9 @@
+using commons;
+using email;
+using email.Services;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using email.Services;
-using commons;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,9 +32,10 @@ builder.Services.AddGrpc(options =>
 });
 builder.Services.AddScoped<ServiceInterceptor>();
 builder.Services.AddHttpClient();
+builder.Services.AddScoped<EmailServiceImplementation>();
 var app = builder.Build();
 
-app.MapGrpcService<emailMessage>();
+app.MapGrpcService<sendEmailMessage>();
 app.MapGet("/", () => "gRPC service 'email' is running.");
 
 app.Run();

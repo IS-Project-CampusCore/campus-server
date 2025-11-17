@@ -60,6 +60,7 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+
   email:
     build:
       context: .

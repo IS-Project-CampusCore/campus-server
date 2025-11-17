@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Services\emailMessage.cs" />
+    <None Include="Services\sendEmailMessage.cs" />
   </ItemGroup>
 
   <ItemGroup>
