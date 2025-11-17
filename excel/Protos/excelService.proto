@@ -8,15 +8,24 @@ package excelService;
 
 service excelService
 { 
-    rpc DoSomething (MyMessageRequest) returns (commons.protos.MessageResponse);
+
+    // Parse Excel file
+    rpc ParseExcel (ParseExcelRequest) returns (commons.protos.MessageResponse);
+
+    // Fiecare upload trece prin partea asta:
+    // - daca fiserul nu exista in bd => incarcare noua, upload + Parse 
+    // - daca fisierul exista si e identic => report "Exista deja acest fisier"
+    // - daca fisiesrul exista dar e diferit => upadate + parsare prin comparatie
+    rpc CheckOrUpdate (CheckOrUpdateExcelRequest) returns (commons.protos.MessageResponse);
 }
 
-message MyMessageRequest
+message ParseExcelRequest
 {
-  string message = 1;
+    string file_name = 1;
 }
 
-message MyMessageResponse
+message CheckOrUpdateExcelRequest
 {
-  string responseMessage = 1;
+    string file_name = 1;
+    bytes content = 2; 
 }
