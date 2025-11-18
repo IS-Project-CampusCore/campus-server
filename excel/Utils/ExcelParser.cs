@@ -5,78 +5,40 @@ namespace excel.Utils;
 
 public static class ExcelParser
 {
-    public enum ExcelTemplateType
+    public static ParsedExcel ParseGeneric(string filePath)
     {
-        Unknown,
-        Grades, 
-        Users
-    }
+        var result = new ParsedExcel();
 
-    // Ce tip de fisier a fost introdus si comform carui mod trebe parsat
-    public static ExcelTemplateType DetectTemplate(string filePath)
-    {
         using var workbook = new XLWorkbook(filePath);
         var ws = workbook.Worksheet(1);
 
-        var headerCells = ws.Row(1).Cells().Select(c => c.GetString().Trim()).ToList();
+        var headerRow = ws.Row(1);
+        var lastHeaderCell = headerRow.LastCellUsed()?.Address.ColumnNumber ?? 0;
 
-        //Grades template
-        if (headerCells.Contains("StudentId") && headerCells.Contains("FirstName") && headerCells.Contains("CourseId"))
+        for (int col = 1; col <= lastHeaderCell; col++)
         {
-            return ExcelTemplateType.Grades;
+            var headerText = headerRow.Cell(col).GetString().Trim();
+            result.Headers.Add(headerText);
         }
 
-        //Users template
-        if (headerCells.Contains("Email") && headerCells.Contains("Role"))
+        var lastRow = ws.LastRowUsed()?.RowNumber() ?? 1;
+
+        for (int row = 2; row <= lastRow; row++)
         {
-            return ExcelTemplateType.Users;
-        }
+            var excelRow = ws.Row(row);
+            var rowValues = new List<string>();
 
-        return ExcelTemplateType.Unknown;
-    }
-
-    public static List<GradeRow> ParseGrades(string filePath)
-    {
-        var result = new List<GradeRow>();
-        using var workbook = new XLWorkbook(filePath);
-        var ws = workbook.Worksheet(1);
-        var lastRow = ws.LastRowUsed().RowNumber();
-
-        for (int row = 2; row < lastRow; row++)
-        {
-            var r = ws.Row(row);
-            result.Add(new GradeRow
+            for (int col = 1; col <= lastHeaderCell; col++)
             {
-                StudentId = r.Cell(2).GetString(),
-                FirstName = r.Cell(3).GetString(),
-                LastName = r.Cell(4).GetString(),
-                CourseId = r.Cell(5).GetString(),
-                Grade = r.Cell(6).GetString()
-            });
+                var cellVaue = excelRow.Cell(col).GetString().Trim();
+                rowValues.Add(cellVaue);
+            }
+
+            // ingnore completly empty rows
+            if (rowValues.Any(v => !string.IsNullOrEmpty(v)))
+                result.Rows.Add(rowValues);
         }
-        return result;
-    }
 
-    public static List<UserRow> ParseUsers(string filePath)
-    {
-        var result = new List<UserRow>();
-
-        using var workbook = new XLWorkbook(filePath);
-        var ws = workbook.Worksheet(1);
-        var lastRow = ws.LastRowUsed().RowNumber();
-
-        for (int row = 2;row < lastRow; row++)
-        {
-            var r = ws.Row(row);
-            result.Add(new UserRow
-            {
-                // presupunem ca in celula 1 sunt niste numere care doar sunt?
-                FirstName = r.Cell(2).GetString(),
-                LastName = r.Cell(3).GetString(),
-                Email = r.Cell(4).GetString(),
-                Role = r.Cell(5).GetString(),
-            });
-        }
         return result;
     }
 }

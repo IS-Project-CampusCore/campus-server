@@ -58,6 +58,7 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+  
   excel:
     build:
       context: .
