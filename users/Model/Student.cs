@@ -8,4 +8,3 @@
         int year,
         int group,
         string major): Communicator(id,name, email, passwordHash,"Student",isVerified);
-}
