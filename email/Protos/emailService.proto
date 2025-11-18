@@ -15,8 +15,8 @@ service emailService
 
 message SendEmailRequest
 {
-     string to_email = 1;
+    string to_email = 1;
     string to_name = 2;      
-    string subject = 3;
-    string html_content = 4;
+    string templateName = 3;
+    string templateData = 4;
 }

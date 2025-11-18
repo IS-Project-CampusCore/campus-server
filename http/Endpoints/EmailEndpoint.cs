@@ -1,16 +1,19 @@
 ﻿
 
 using commons.Protos; 
-using FastEndpoints;
 using emailServiceClient; 
+using FastEndpoints;
+using System.Text.Json;
 
 namespace http.Endpoints;
+
+public record TemplateData(string Name);
 
 public record SendEmailApiRequest(
     string ToEmail,
     string ToName,
-    string Subject,
-    string Body
+    string TemplateName,
+    JsonElement TemplateData
 );
 
 
@@ -26,12 +29,16 @@ public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
 
     public override async Task HandleAsync(SendEmailApiRequest req, CancellationToken ct)
     {
+        //MessageBody requestData = new MessageBody(req.TemplateData);
+        //string? templateDataString = requestData.TryGetString("Name") ;
+        string templateDataString = JsonSerializer.Serialize(req.TemplateData);
+
         var grpcRequest = new SendEmailRequest
         {
             ToEmail = req.ToEmail,
-            ToName = req.ToName ?? "", 
-            Subject = req.Subject,
-            HtmlContent = req.Body 
+            ToName = req.ToName ?? "",
+            TemplateName = req.TemplateName,
+            TemplateData = templateDataString
         };
 
         MessageResponse apiRes;

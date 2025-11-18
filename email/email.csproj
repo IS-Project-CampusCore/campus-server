@@ -32,4 +32,10 @@
     <Protobuf Include="Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Templates\Welcome.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
