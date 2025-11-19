@@ -1,13 +1,6 @@
- public record CampusStudent
-        (string id,
-        string name,
-        string email,
-        string passwordHash,
-        bool isVerified,
-        string university,
-        int year,
-        int group,
-        string major,
-        string campusNr, 
-        string roomNr
-        ): Student(id,name,email,passwordHash,isVerified,university,year,group,major);
+namespace users.Model;
+public record CampusStudent() : Student(UserType.CAMPUS_STUDENT)
+{
+    public required string Campus { get; set; } = string.Empty;
+    public required int Room { get; set; } = -1;
+}

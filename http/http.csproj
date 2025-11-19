@@ -27,8 +27,12 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\SomeService\Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="client"/>
-    <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="client"/>
+    <Protobuf Include="..\SomeService\Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
+    <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Auth\" />
   </ItemGroup>
 
 </Project>

@@ -34,6 +34,6 @@ builder.Services.AddGrpc(options =>
 
 var app = builder.Build();
 
-app.MapGrpcService<usersMessage>();
+app.MapGrpcService<LoginMessage>();
 
 app.Run();
