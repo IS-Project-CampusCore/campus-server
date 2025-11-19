@@ -12,6 +12,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__SomeService=http://someservice:8080
       - GrpcServices__UsersService=http://users:8080
+      - GrpcServices__EmailService=http://email:8080 
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
@@ -20,6 +21,7 @@ services:
     depends_on:
       - someservice # Tells Docker to start someservice *before* this one
       - users
+      - email
       - seq
 
   # This is your 'someService' gRPC service
@@ -53,6 +55,18 @@ services:
       dockerfile: ./users/Dockerfile
     ports:
       - "8082:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
+
+  email:
+    build:
+      context: .
+      dockerfile: ./email/Dockerfile
+    ports:
+      - "8083:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
