@@ -27,10 +27,8 @@ public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
         AllowAnonymous();
     }
 
-    public override async Task HandleAsync(SendEmailApiRequest req, CancellationToken ct)
+    public override async Task HandleAsync(SendEmailApiRequest req, CancellationToken cancellationToken)
     {
-        //MessageBody requestData = new MessageBody(req.TemplateData);
-        //string? templateDataString = requestData.TryGetString("Name") ;
         string templateDataString = JsonSerializer.Serialize(req.TemplateData);
 
         var grpcRequest = new SendEmailRequest
@@ -41,24 +39,21 @@ public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
             TemplateData = templateDataString
         };
 
-        MessageResponse apiRes;
         try
         {
-            apiRes = await Client.SendEmailAsync(grpcRequest, cancellationToken: ct);
-        }
-        catch (Exception ex)
-        {
-            await Send.ErrorsAsync(500); 
-            return;
-        }
+            var apiRes = await Client.SendEmailAsync(grpcRequest, null, null, cancellationToken);
 
-        if (apiRes.Success)
-        {
-            await Send.OkAsync(apiRes.Body); 
+            if (apiRes.Success)
+            {
+                await Send.OkAsync(apiRes.Body);
+                return;
+            }
+
+            await Send.ErrorsAsync(apiRes.Code);
         }
-        else
+        catch (Exception)
         {
-            await Send.ErrorsAsync(apiRes.Code); 
+            await Send.ErrorsAsync(500);
         }
     }
 }

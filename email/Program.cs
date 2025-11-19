@@ -26,16 +26,19 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+builder.Services.AddScoped<ServiceInterceptor>();
 builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
 });
-builder.Services.AddScoped<ServiceInterceptor>();
+
 builder.Services.AddHttpClient();
-builder.Services.AddScoped<EmailServiceImplementation>();
+
+builder.Services.AddSingleton<EmailServiceImplementation>();
+
 var app = builder.Build();
 
-app.MapGrpcService<sendEmailMessage>();
+app.MapGrpcService<SendEmailMessage>();
 app.MapGet("/", () => "gRPC service 'email' is running.");
 
 app.Run();

@@ -5,24 +5,21 @@ using Grpc.Core;
 
 namespace email.Services;
 
-public class sendEmailMessage(
-    ILogger<sendEmailMessage> logger,
-    EmailServiceImplementation implementation)
-    : emailService.emailServiceBase
+public class SendEmailMessage(
+    ILogger<SendEmailMessage> logger,
+    EmailServiceImplementation implementation
+) : emailService.emailServiceBase
 {
-
     public override async Task<MessageResponse> SendEmail(SendEmailRequest request, ServerCallContext context)
     {
-        logger.LogInformation($"{nameof(sendEmailMessage)} has begun");
-        logger.LogInformation($"{nameof(sendEmailMessage)} Request: {request.ToString()}");
+        logger.LogInformation($"Email Request: {request.ToString()}");
 
         try
         {
-            await implementation.ProcessEmailSend(request); 
-            var response = MessageResponse.Ok("Email succesfully sent!");
+            await implementation.SendEmail(request); 
 
-            logger.LogInformation($"The request has been processed succesffuly: Response: {response.ToString()}");
-            return response;
+            logger.LogInformation($"The request has been processed succesffuly");
+            return MessageResponse.Ok();
         }
         catch (ServiceMessageException ex)
         {

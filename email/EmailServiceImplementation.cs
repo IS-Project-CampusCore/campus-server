@@ -1,10 +1,5 @@
 ﻿using commons;
-using commons.Protos;
 using emailServiceClient;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using System.IO;
-using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -16,14 +11,18 @@ public class EmailServiceImplementation(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration)
 {
-
-    public async Task ProcessEmailSend(SendEmailRequest request)
+    public async Task SendEmail(SendEmailRequest request)
     {
         logger.LogInformation("Processing SendEmail logic for {Email}", request.ToEmail);
 
+        if (string.IsNullOrEmpty(request.ToEmail) || string.IsNullOrEmpty(request.TemplateName) || string.IsNullOrEmpty(request.TemplateData))
+        {
+            logger.LogWarning("SendEmail request failed: ToEmail, TemplateName, and TemplateData are required.");
+            throw new BadRequestException("ToEmail, TemplateName, and TemplateData cannot be empty.");
+        }
+
         try
         {
-            ValidateRequest(request);
             var httpContent = BuildBrevoPayload(request);
             await SendEmailToBrevoAsync(httpContent, request.ToEmail);
         }
@@ -34,22 +33,12 @@ public class EmailServiceImplementation(
         }
     }
 
-    private void ValidateRequest(SendEmailRequest request)
-    {
-        if (string.IsNullOrEmpty(request.ToEmail) ||
-            string.IsNullOrEmpty(request.TemplateName) ||
-            string.IsNullOrEmpty(request.TemplateData))
-        {
-            logger.LogWarning("SendEmail request failed: ToEmail, TemplateName, and TemplateData are required.");
-            throw new BadRequestException("ToEmail, TemplateName, and TemplateData cannot be empty.");
-        }
-    }
-
     private StringContent BuildBrevoPayload(SendEmailRequest request)
     {
         string rawHtml = GetTemplateContent(request.TemplateName);
-        string subject = ExtractSubjectFromTemplate(rawHtml);
-        string finalHtml = PopulateTemplate(rawHtml, request.TemplateData);
+
+        string emailSubject = ExtractSubjectFromTemplate(rawHtml);
+        string htmlWithData = PopulateTemplate(rawHtml, request.TemplateData);
 
         var payload = new
         {
@@ -58,12 +47,18 @@ public class EmailServiceImplementation(
                 email = configuration["BrevoSettings:EmailFrom"],
                 name = configuration["BrevoSettings:SenderName"]
             },
-            to = new[] { new { email = request.ToEmail, name = request.ToName } },
-            subject = subject,
-            htmlContent = finalHtml
+            to = new[] { 
+                new { 
+                    email = request.ToEmail, 
+                    name = request.ToName 
+                } 
+            },
+            subject = emailSubject,
+            htmlContent = htmlWithData
         };
 
         var jsonPayload = JsonSerializer.Serialize(payload);
+
         return new StringContent(jsonPayload, Encoding.UTF8, "application/json");
     }
 
@@ -77,6 +72,7 @@ public class EmailServiceImplementation(
                 logger.LogError("Template file not found: {TemplatePath}", path);
                 throw new InternalErrorException($"Template file '{templateName}.html' not found.");
             }
+
             return File.ReadAllText(path);
         }
         catch (Exception ex)
@@ -95,7 +91,7 @@ public class EmailServiceImplementation(
         }
 
         logger.LogWarning("Template is missing a subject comment. Using default subject.");
-        throw new InternalErrorException("Template file is invalid: Subject comment '' is missing.");
+        throw new InternalErrorException("Template file is invalid: Subject comment is missing.");
     }
 
     private string PopulateTemplate(string htmlContent, string jsonData)
@@ -111,7 +107,7 @@ public class EmailServiceImplementation(
 
             foreach (var entry in data)
             {
-                htmlContent = htmlContent.Replace($"{{{{{entry.Key}}}}}", entry.Value);
+                htmlContent = htmlContent.Replace($"{{{{{entry.Key.ToLower()}}}}}", entry.Value);
             }
 
             return htmlContent;
@@ -127,6 +123,7 @@ public class EmailServiceImplementation(
     {
         var apiKey = configuration["BrevoSettings:ApiKey"];
         var apiUrl = configuration["BrevoSettings:ApiUrl"];
+
         var httpClient = httpClientFactory.CreateClient();
 
         httpClient.DefaultRequestHeaders.Add("api-key", apiKey);
@@ -142,6 +139,7 @@ public class EmailServiceImplementation(
         {
             var errorBody = await brevoResponse.Content.ReadAsStringAsync();
             logger.LogError("Brevo error: {StatusCode} - {ErrorBody}", brevoResponse.StatusCode, errorBody);
+
             throw new InternalErrorException($"Brevo error: {errorBody}");
         }
     }

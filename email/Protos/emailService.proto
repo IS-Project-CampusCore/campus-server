@@ -11,12 +11,10 @@ service emailService
     rpc SendEmail (SendEmailRequest) returns (commons.protos.MessageResponse);
 }
 
-
-
 message SendEmailRequest
 {
-    string to_email = 1;
-    string to_name = 2;      
+    string toEmail = 1;
+    string toName = 2;      
     string templateName = 3;
     string templateData = 4;
 }
