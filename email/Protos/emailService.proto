@@ -1,0 +1,20 @@
+﻿syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "emailServiceClient";
+
+package emailService;
+
+service emailService
+{ 
+    rpc SendEmail (SendEmailRequest) returns (commons.protos.MessageResponse);
+}
+
+message SendEmailRequest
+{
+    string toEmail = 1;
+    string toName = 2;      
+    string templateName = 3;
+    string templateData = 4;
+}
