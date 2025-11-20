@@ -10,7 +10,6 @@ public class ServiceImplementation
         {
             throw new BadRequestException("Message argument can not be null");
         }
-
         return "The processed message is: " + message;
     }
 }

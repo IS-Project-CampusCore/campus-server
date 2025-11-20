@@ -1,0 +1,39 @@
+﻿syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "excelServiceClient";
+
+package excelService;
+
+service excelService
+{ 
+    rpc ParseExcel (ParseExcelRequest) returns (commons.protos.MessageResponse);
+
+    rpc InsertExcel (InsertExcelRequest) returns (commons.protos.MessageResponse);
+    rpc UpdateExcel (UpdateExcelRequest) returns (commons.protos.MessageResponse);
+    rpc UpsertExcel (UpsertExcelRequest) returns (commons.protos.MessageResponse);
+}
+
+message ParseExcelRequest
+{
+    string fileName = 1;
+}
+
+message InsertExcelRequest
+{
+    string fileName = 1;
+    bytes content = 2; 
+}
+
+message UpdateExcelRequest
+{
+    string fileName = 1;
+    bytes content = 2; 
+}
+
+message UpsertExcelRequest
+{
+    string fileName = 1;
+    bytes content = 2; 
+}

@@ -12,6 +12,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__SomeService=http://someservice:8080
       - GrpcServices__UsersService=http://users:8080
+      - GrpcServices__EmailService=http://email:8080 
+      - GrpcServices__ExcelService=http://excel:8080
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
@@ -21,6 +23,8 @@ services:
     depends_on:
       - someservice # Tells Docker to start someservice *before* this one
       - users
+      - email
+      - excel
       - seq
 
   # This is your 'someService' gRPC service
@@ -60,3 +64,29 @@ services:
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
     depends_on:
       - seq
+
+  email:
+    build:
+      context: .
+      dockerfile: ./email/Dockerfile
+    ports:
+      - "8083:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
+  
+  excel:
+    build:
+      context: .
+      dockerfile: ./excel/Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
+    volumes:
+      - ./FileStorage:/app/FileStorage
