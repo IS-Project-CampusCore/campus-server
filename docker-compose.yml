@@ -13,6 +13,7 @@ services:
       - GrpcServices__SomeService=http://someservice:8080
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
+      - GrpcServices__ExcelService=http://excel:8080
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
@@ -22,6 +23,7 @@ services:
       - someservice # Tells Docker to start someservice *before* this one
       - users
       - email
+      - excel
       - seq
 
   # This is your 'someService' gRPC service
@@ -72,3 +74,17 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+  
+  excel:
+    build:
+      context: .
+      dockerfile: ./excel/Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
+    volumes:
+      - ./FileStorage:/app/FileStorage
