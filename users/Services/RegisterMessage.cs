@@ -1,32 +1,35 @@
 ﻿using commons;
 using commons.Protos;
+using Grpc.Core;
 using MediatR;
+using users.Model;
 using usersServiceClient;
 
 namespace users.Services;
 
-public class LoginMessage(
+public class RegisterMessage(
     ILogger<LoginMessage> logger,
     IUsersServiceImplementation implementation
-) : IRequestHandler<LoginRequest, MessageResponse>
+) : IRequestHandler<RegisterRequest, MessageResponse>
 {
     private readonly ILogger<LoginMessage> _logger = logger;
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    public Task<MessageResponse> Handle(LoginRequest request, CancellationToken token)
+    public Task<MessageResponse> Handle(RegisterRequest request, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Password))
+        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Name) || string.IsNullOrEmpty(request.Role))
         {
-            _logger.LogError("Email or Password can not be empty");
-            throw new BadRequestException("Email or Password can not be empty");
+            _logger.LogError("Request filed can not be empty");
+            throw new BadRequestException("Request filed can not be empty");
         }
 
         try
         {
             var email = request.Email;
-            var password = request.Password;
+            var name = request.Name;
+            var role = User.StringToRole(request.Role);
 
-            return Task.FromResult(MessageResponse.Ok(_implementation.AuthUser(email, password)));
+            return Task.FromResult(MessageResponse.Ok(_implementation.RegisterUser(email, name, role)));
         }
         catch (BadRequestException ex)
         {

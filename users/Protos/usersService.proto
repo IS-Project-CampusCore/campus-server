@@ -4,90 +4,31 @@ import "Protos/common.proto";
 
 option csharp_namespace = "usersServiceClient";
 
-package users;
+package usersService;
 
 service usersService
 { 
-    rpc DoSomething (MyMessageRequest) returns (commons.protos.MessageResponse);
-    rpc SendVerificationCode(SendVerificationCodeRequest) returns (SendVerificationCodeResponse);
-    rpc Login(LoginRequest) returns (LoginResponse);
-    rpc Register(RegisterRequest) returns (RegisterResponse);
-    rpc ResetPassword (ResetPasswordRequest) returns (ResetPasswordResponse);
-    rpc GetUser(GetUserRequest) returns (GetUserResponse);
+    rpc Verify (VerifyRequest) returns (commons.protos.MessageResponse);
+    rpc Login (LoginRequest) returns (commons.protos.MessageResponse);
+    rpc Register (RegisterRequest) returns (commons.protos.MessageResponse);
 }
 
-message SendVerificationCodeRequest
+message VerifyRequest
 {
   string email = 1;
-}
-
-message SendVerificationCodeResponse
-{
-  bool success =1;
-  string message =2;
+  string password = 2;
+  string code = 3;
 }
 
 message RegisterRequest
 {
     string email = 1;
-    string username = 2;
-    string password = 3;
-    string verification_code = 4;
-}
-
-message RegisterResponse
-{
-    bool success =1;
-    string message =2;
-    string user_id =3;
+    string name = 2;
+    string role = 3;
 }
 
 message LoginRequest 
 {
-    string email =1;
-    string password =2;
-}
-
-message LoginResponse
-{
-    bool success =1;
-    string token =2;
-    string user_id =3;
-    string email = 4;
-    string name = 5;
-    string role =6;
-}
-
-message ResetPasswordRequest
-{
-    string email =1;
-    string verification_code =2;
-    string new_password =3;
-}
-
-message ResetPasswordResponse
-{
-    bool success =1;
-    string message =2;
-}
-
-message GetUserRequest
-{
-    string email =1;
-}
-
-message GetUserResponse
-{
-    string user_id =1;
-    string name = 2;
-    string email = 3;
-    string role =4;
-    bool is_verified =5;
-}
-message MyMessageRequest{
-	string message = 1;
-}
-message MyMessageResponse
-{
-    string message =1;
+    string email = 1;
+    string password = 2;
 }

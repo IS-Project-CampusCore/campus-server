@@ -3,6 +3,7 @@ using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using users.Services;
 using commons;
+using users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,15 +26,19 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-builder.Services.AddScoped<ServiceInterceptor>();
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UsersService).Assembly));
 
 builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
 });
 
+builder.Services.AddScoped<ServiceInterceptor>();
+
+builder.Services.AddSingleton<IUsersServiceImplementation, UsersServiceImplementation>();
+
 var app = builder.Build();
 
-app.MapGrpcService<LoginMessage>();
+app.MapGrpcService<UsersService>();
 
 app.Run();

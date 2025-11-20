@@ -12,6 +12,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__SomeService=http://someservice:8080
       - GrpcServices__UsersService=http://users:8080
+      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
@@ -56,5 +57,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
+      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
     depends_on:
       - seq
