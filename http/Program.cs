@@ -2,8 +2,11 @@ using FastEndpoints;
 using Grpc.Net.Client;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using someServiceClient;
+using System.Security.Claims;
+using System.Text;
 using usersServiceClient;
 using excelServiceClient;
 
@@ -27,7 +30,6 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ConfigureHttpsDefaults(httpsOptions =>
     {
-        // This will stop requiring a client certificate
         httpsOptions.ClientCertificateMode = ClientCertificateMode.NoCertificate;
     });
 });
@@ -35,6 +37,14 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(builder.Configuration["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex")),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            RoleClaimType = ClaimTypes.Role
+        };
     });
 
 builder.Services.AddFastEndpoints();

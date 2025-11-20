@@ -1,10 +1,25 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace commons.Protos;
 
 public partial class MessageResponse
 {
-    public MessageBody GetBody() => StringToMessageBody(Body);
+    [JsonIgnore]
+    public MessageBody Payload
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(Body))
+                return new MessageBody();
+
+            return StringToMessageBody(Body);
+        }
+        set
+        {
+            Body = value.Json.ValueKind == JsonValueKind.Undefined ? string.Empty : value.Json.ToString();
+        }
+    }
 
     public static MessageResponse Ok(object? response = null)
     {
@@ -79,12 +94,35 @@ public partial class MessageResponse
             Errors = ex.Message
         };
     }
+    public T? GetPayload<T>(JsonSerializerOptions? options = null)
+    {
+        if (string.IsNullOrEmpty(Body)) 
+            return default;
 
-    public static string BodyToString(MessageBody body) => body.Json.ToString();
+        return JsonSerializer.Deserialize<T>(Body, options);
+    }
 
-    public static string BodyToString(object? body) => BodyToString(MessageBody.From(body));
+    public static string BodyToString(object? body)
+    {
+        if (body is null) 
+            return string.Empty;
 
-    public static MessageBody StringToMessageBody(string jsonBody) => new(JsonDocument.Parse(jsonBody).RootElement);
+        if (body is string s) 
+            return s;
+
+        if (body is MessageBody mb) 
+            return mb.Json.ToString();
+
+        return JsonSerializer.Serialize(body);
+    }
+
+    public static MessageBody StringToMessageBody(string jsonBody)
+    {
+        if (string.IsNullOrWhiteSpace(jsonBody)) 
+            return new MessageBody();
+
+        return new MessageBody(JsonDocument.Parse(jsonBody).RootElement);
+    }
 }
 
 public readonly struct MessageBody
