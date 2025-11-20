@@ -1,10 +1,8 @@
-  public record Student( 
-        string id,
-        string name,
-        string email,
-        string passwordHash,
-        bool isVerified,
-        string university,
-        int year,
-        int group,
-        string major): Communicator(id,name, email, passwordHash,"Student",isVerified);
+using users.Model;
+
+public record Student(UserType Role = UserType.STUDENT) : Communicator(Role)
+{
+    public required int Year { get; set; } = -1;
+    public required int Group { get; set; } = -1;
+    public required string Major {  get; set; } = string.Empty;
+}

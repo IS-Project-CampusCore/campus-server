@@ -1,13 +1,9 @@
-public record Professor 
-        (
-        string id,
-        string name,
-        string email,
-        string passwordHash,
-        bool isVerified,
-        string university,
-        List<string> subjects,
-        string department,
-        string title
-        ):Communicator(id,name,email, passwordHash, "Professor",isVerified);
+using users.Model;
+
+public record Professor() : Communicator(UserType.PROFESSOR)
+{
+    public required List<string> Subjects { get; set; } = [];
+    public required string Department { get; set; } = string.Empty;
+    public string Title {  get; set; } = string.Empty;
+}
     

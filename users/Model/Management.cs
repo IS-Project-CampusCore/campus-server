@@ -1,9 +1,4 @@
-public record Management
-    (
-       string id,
-       string name,
-       string email,
-       string passwordHash,
-       bool isVerified
-    ): User (id,name,email, passwordHash, "Management",isVerified);
+namespace users.Model;
+
+public record Management() : User(UserType.MANAGEMENT);
    
