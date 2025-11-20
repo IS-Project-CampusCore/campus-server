@@ -80,7 +80,7 @@ services:
       context: .
       dockerfile: ./excel/Dockerfile
     ports:
-      - "8083:8080"
+      - "8084:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
