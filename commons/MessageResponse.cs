@@ -75,14 +75,14 @@ public partial class MessageResponse
         {
             Success = false,
             Code = 500,
-            Body = null,
+            Body = "",
             Errors = ex.Message
         };
     }
 
     public static string BodyToString(MessageBody body) => body.Json.ToString();
 
-    public static string BodyToString(object? body) => body is string ? (string)body : JsonSerializer.Serialize(body);
+    public static string BodyToString(object? body) => BodyToString(MessageBody.From(body));
 
     public static MessageBody StringToMessageBody(string jsonBody) => new(JsonDocument.Parse(jsonBody).RootElement);
 }
@@ -99,7 +99,25 @@ public readonly struct MessageBody
     
     public MessageBody(JsonElement json) => _json = json;
 
-    public readonly string String() => ValidateJsonOrThrow(JsonValueKind.String).ToString();
+    public static MessageBody From<T>(T value, JsonSerializerOptions? options = null)
+    {
+        JsonElement element = JsonSerializer.SerializeToElement(value, options);
+        return new MessageBody(element);
+    }
+
+    public override string ToString()
+    {
+        return _json.ValueKind switch
+        {
+            JsonValueKind.String => _json.GetString() ?? string.Empty,
+
+            JsonValueKind.Null => string.Empty,
+
+            _ => _json.GetRawText()
+        };
+    }
+
+    public readonly string String() => ValidateJsonOrThrow(JsonValueKind.String).GetString()!;
     
     public readonly int Int32() => ValidateJsonOrThrow(JsonValueKind.Number).GetInt32();
 

@@ -6,7 +6,6 @@ using Serilog;
 using someServiceClient;
 using usersServiceClient;
 using excelServiceClient;
-//using excelService;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -53,7 +52,7 @@ builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
-builder.Services.AddGrpcClient<excelServiceClient.excelService.excelServiceClient>(o =>
+builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:ExcelService"];
     o.Address = new Uri(address!);

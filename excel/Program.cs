@@ -3,6 +3,9 @@ using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using excel.Services;
 using commons;
+using excelServiceClient;
+using excel.Implementation;
+using excel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,15 +28,18 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ExcelService).Assembly));
+
 builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
 });
 builder.Services.AddScoped<ServiceInterceptor>();
 
+builder.Services.AddSingleton<ExcelServiceImplementation>();
+
 var app = builder.Build();
 
-app.MapGrpcService<excelMessage>();
-app.MapGet("/", () => "gRPC service 'excel' is running.");
+app.MapGrpcService<ExcelService>();
 
 app.Run();
