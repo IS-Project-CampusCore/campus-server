@@ -162,6 +162,5 @@ The communication path is show in the below diagram:
 ##### 3. Use-case Diagram
 
 The actors and the use cases are sown in the diagram below:
-
-<img width="1688" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/d74d6794-4105-4ef2-98b6-a0a764dd13d2" />
+<img width="1687" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/d3b98fb7-66e7-44bd-b08f-f52cc56d54ee" />
 
