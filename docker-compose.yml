@@ -60,9 +60,13 @@ services:
       - "8082:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - GrpcServices__EmailService=http://email:8080 
+      - GrpcServices__ExcelService=http://excel:8080
       - Logging__SeqUrl=http://seq
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
     depends_on:
+      - email
+      - excel
       - seq
 
   email:

@@ -36,10 +36,8 @@
 
   <ItemGroup>
     <Protobuf Include="Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Model\" />
+    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
+    <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" />
   </ItemGroup>
 
 </Project>

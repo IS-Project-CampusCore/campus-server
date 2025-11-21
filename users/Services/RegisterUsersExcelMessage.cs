@@ -1,23 +1,22 @@
 ﻿using commons;
 using commons.Protos;
-using Grpc.Core;
 using MediatR;
 using users.Model;
 using usersServiceClient;
 
 namespace users.Services;
 
-public class RegisterMessage(
+public class RegisterUserExcelMessage(
     ILogger<LoginMessage> logger,
     IUsersServiceImplementation implementation
-) : IRequestHandler<RegisterRequest, MessageResponse>
+) : IRequestHandler<UsersExcelRequest, MessageResponse>
 {
     private readonly ILogger<LoginMessage> _logger = logger;
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    public async Task<MessageResponse> Handle(RegisterRequest request, CancellationToken token)
+    public async Task<MessageResponse> Handle(UsersExcelRequest request, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Name) || string.IsNullOrEmpty(request.Role))
+        if (string.IsNullOrEmpty(request.FileName))
         {
             _logger.LogError("Request filed can not be empty");
             throw new BadRequestException("Request filed can not be empty");
@@ -25,11 +24,9 @@ public class RegisterMessage(
 
         try
         {
-            var email = request.Email;
-            var name = request.Name;
-            var role = User.StringToRole(request.Role);
+            var fileName = request.FileName;
 
-            return MessageResponse.Ok(await _implementation.RegisterUser(email, name, role));
+            return MessageResponse.Ok(await _implementation.RegisterUsersFromExcel(fileName));
         }
         catch (BadRequestException ex)
         {

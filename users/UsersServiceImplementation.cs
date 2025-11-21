@@ -1,30 +1,46 @@
 ﻿using BCrypt.Net;
 using commons;
+using emailServiceClient;
+using excelServiceClient;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Authentication;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.Json;
 using users.Model;
+using users.Utils;
+using usersServiceClient;
 
 namespace users;
 
 public interface IUsersServiceImplementation 
 { 
-    public User? RegisterUser(string email, string name, UserType role);
+    public Task<User?> RegisterUser(string email, string name, UserType role);
 
     public UserWithJWT AuthUser(string email, string password);
 
     public UserWithJWT Verify(string email, string password, string verifyCode);
 
+    public Task<List<User?>> RegisterUsersFromExcel(string fileName);
+
 }
 
-public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logger, IConfiguration config) : IUsersServiceImplementation
+public class UsersServiceImplementation(
+    ILogger<UsersServiceImplementation> logger,
+    IConfiguration config,
+    emailService.emailServiceClient emailService,
+    excelService.excelServiceClient excelService
+    ) : IUsersServiceImplementation
 {
     private readonly ILogger<UsersServiceImplementation> _logger = logger;
     private readonly IConfiguration _config = config;
 
-    private List<User> _users = initializeMockData();
+    private readonly emailService.emailServiceClient _emailService = emailService;
+    private readonly excelService.excelServiceClient _excelService = excelService;
+
+    private List<User> _users = [];
     private readonly Dictionary<string, string> _verificationCodes = [];
 
     public UserWithJWT AuthUser(string email, string password)
@@ -47,7 +63,7 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
         return new UserWithJWT(user, GenerateJwtToken(user.Id, user.Email, user.Role));
     }
 
-    public User? RegisterUser(string email, string name, UserType role)
+    public async Task<User?> RegisterUser(string email, string name, UserType role)
     {
         User? user = FindByEmailOrDefault(email);
         if (user is not null)
@@ -64,7 +80,30 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
             IsVerified = false,
         };
 
-        string verfyCode = "1111";
+        int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
+        var verfyCode = verifyCodeNumber.ToString("D4");
+
+        _logger.LogInformation($"Verify Code:{verfyCode} generated for email: {email}");
+
+        string templateDataString = JsonSerializer.Serialize(new
+        {
+            Name = name,
+            Code = verfyCode
+        });
+
+        var response = await _emailService.SendEmailAsync(new SendEmailRequest
+        {
+            ToEmail = email,
+            ToName = name,
+            TemplateName = "Welcome",
+            TemplateData = templateDataString
+        });
+
+        if (!response.Success)
+        {
+            _logger.LogError($"SendEmail has failed with Code:{response.Code} and Error:{response.Errors}");
+            throw new InternalErrorException(response.Errors);
+        }
 
         StoreVerifyCode(email, verfyCode);
 
@@ -125,9 +164,51 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
         }
     }
 
-    public User? FindByEmailOrDefault(string email) => _users.FirstOrDefault(x => x.Email == email);
+    public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
+    {
+        if (fileName is null)
+        {
+            _logger.LogError("The file name is empty");
+            throw new BadRequestException("No file selected");
+        }
 
-    public User UpdateUser(User newUser)
+        var response = await _excelService.ParseExcelAsync(new ParseExcelRequest { FileName = fileName });
+
+        if(!response.Success)
+        {
+            _logger.LogError($"ParseExcel failed for FileName:{fileName} whit Code:{response.Code} and Error:{response.Errors}");
+            throw new InternalErrorException(response.Errors);
+        }
+
+        if(string.IsNullOrEmpty(response.Body))
+        {
+            _logger.LogError($"Excel FileName:{fileName} has no data");
+            throw new BadRequestException("Empty excel file");
+        }
+
+        ExcelData data = response.GetPayload<ExcelData>()!;
+        List<RegisterRequest> requests = ExcelToRegisterRequest.ConvertToRegisterRequest(data);
+
+        List<User?> users = [];
+        foreach (var req in requests)
+        {
+            try
+            {
+                User? newUser = await RegisterUser(req.Email, req.Name, User.StringToRole(req.Role));
+                users.Add(newUser);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Request(Email:{req.Email}, Name:{req.Name}, Role:{req.Role}) exit with Error:{ex.Message}");
+            }
+        }
+
+        return users;
+    }
+
+    private User? FindByEmailOrDefault(string email) => _users.FirstOrDefault(x => x.Email == email);
+
+    private User UpdateUser(User newUser)
     {
         User? oldUser = FindByEmailOrDefault(newUser.Email);
         if (oldUser is null)
@@ -143,7 +224,7 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
         return newUser;
     }
 
-    public void StoreVerifyCode(string email, string code)
+    private void StoreVerifyCode(string email, string code)
     {
         if(HasVerifyCode(email) && !IsVerify(email))
         {
@@ -154,9 +235,9 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
         _verificationCodes[email] = code;
     }
 
-    public string? GetVerificationCode(string email) => _verificationCodes.TryGetValue(email, out var code) ? code : null;
+    private string? GetVerificationCode(string email) => _verificationCodes.TryGetValue(email, out var code) ? code : null;
 
-    public void RemoveVerificationCode(string email)
+    private void RemoveVerificationCode(string email)
     {
         if (!HasVerifyCode(email))
         {
@@ -167,12 +248,12 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
         _verificationCodes.Remove(email);
     }
 
-    public bool HasVerifyCode(string email)
+    private bool HasVerifyCode(string email)
     {
         return _verificationCodes.ContainsKey(email);
     }
 
-    public bool IsVerify(string email)
+    private bool IsVerify(string email)
     {
         return FindByEmailOrDefault(email)?.IsVerified ?? false;
     }
@@ -205,41 +286,5 @@ public class UsersServiceImplementation(ILogger<UsersServiceImplementation> logg
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
         return tokenHandler.WriteToken(token);
-    }
-
-    private static List<User> initializeMockData()
-    {
-        List<User> users = [];
-        var student1 = new Student
-        {
-            Id = "123",
-            Name = "Ion Popescu",
-            Email = "birlea24@gmail.com",
-            PasswordHash = "",
-            IsVerified = false,
-            University = "Universitatea tehnica din cluj napoce",
-            Year = 2,
-            Group = 1,
-            Major = "Computer Science",
-            Role = UserType.STUDENT
-        };
-        var professor1 = new Professor
-        {
-            Id = "2004",
-            Name = "Maria Ionescu",
-            Email = "maria.ionescu@campus.utcluj.ro",
-            PasswordHash = "",
-            IsVerified = false,
-            University = "Universitatea tehnica din cluj napoca",
-            Subjects = new List<string> { "Data Structures", "Algorithms" },
-            Department = "Computer Science",
-            Title = "Doctor",
-            Role = UserType.PROFESSOR
-        };
-
-        users.Add(student1);
-        users.Add(professor1);
-
-        return users;
     }
 }

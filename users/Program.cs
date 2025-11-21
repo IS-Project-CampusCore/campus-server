@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using users.Services;
 using commons;
 using users;
+using emailServiceClient;
+using excelServiceClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,18 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
     });
+});
+
+builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:EmailService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:ExcelService"];
+    o.Address = new Uri(address!);
 });
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UsersService).Assembly));
