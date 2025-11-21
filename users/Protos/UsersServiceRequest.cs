@@ -8,3 +8,5 @@ public partial class LoginRequest : IRequest<MessageResponse>;
 public partial class RegisterRequest : IRequest<MessageResponse>;
 
 public partial class VerifyRequest : IRequest<MessageResponse>;
+
+public partial class UsersExcelRequest : IRequest<MessageResponse>;

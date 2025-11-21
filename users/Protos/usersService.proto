@@ -11,6 +11,8 @@ service usersService
     rpc Verify (VerifyRequest) returns (commons.protos.MessageResponse);
     rpc Login (LoginRequest) returns (commons.protos.MessageResponse);
     rpc Register (RegisterRequest) returns (commons.protos.MessageResponse);
+    
+    rpc RegisterUsersFromExcel (UsersExcelRequest) returns (commons.protos.MessageResponse);
 }
 
 message VerifyRequest
@@ -31,4 +33,9 @@ message LoginRequest
 {
     string email = 1;
     string password = 2;
+}
+
+message UsersExcelRequest
+{
+    string fileName = 1;
 }
