@@ -6,17 +6,13 @@ using http.Auth;
 
 namespace http.Endpoints.Excel;
 
-
-public record ExcelParseRequest(string FileName);
-public record ExcelUplaodRequest(IFormFile File);
-
-public class InsertExcel(ILogger<InsertExcel> logger) : CampusEndpoint<ExcelUplaodRequest>(logger)
+public class UpdateExcel(ILogger<UpdateExcel> logger) : CampusEndpoint<ExcelUplaodRequest>(logger)
 {
     public excelService.excelServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
-        Post("api/excel/insert");
+        Post("api/excel/update");
         AllowFileUploads();
 
         Policies(CampusPolicy.AuthenticatedUser);
@@ -36,13 +32,13 @@ public class InsertExcel(ILogger<InsertExcel> logger) : CampusEndpoint<ExcelUpla
 
         byte[] bytes = ms.ToArray();
 
-        var grpcRequest = new InsertExcelRequest
+        var grpcRequest = new UpdateExcelRequest
         {
             FileName = req.File.FileName,
             Content = ByteString.CopyFrom(bytes)
         };
 
-        MessageResponse grpcResponse = await Client.InsertExcelAsync(grpcRequest, null, null, cancellationToken);
+        MessageResponse grpcResponse = await Client.UpdateExcelAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(grpcResponse, cancellationToken);
     }
 }

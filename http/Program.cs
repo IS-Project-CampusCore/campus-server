@@ -1,5 +1,7 @@
+using excelServiceClient;
 using FastEndpoints;
-using Grpc.Net.Client;
+using http.Auth;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Microsoft.IdentityModel.Tokens;
@@ -8,7 +10,6 @@ using someServiceClient;
 using System.Security.Claims;
 using System.Text;
 using usersServiceClient;
-using excelServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -34,20 +35,6 @@ builder.WebHost.ConfigureKestrel(options =>
     });
 });
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(builder.Configuration["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex")),
-            ValidateIssuer = false,
-            ValidateAudience = false,
-            RoleClaimType = ClaimTypes.Role
-        };
-    });
-
-builder.Services.AddFastEndpoints();
 builder.Services.AddGrpc();
 
 builder.Services.AddGrpcClient<someService.someServiceClient>(o =>
@@ -74,9 +61,26 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = CampusAuthentication.SchemeName;
+    options.DefaultChallengeScheme = CampusAuthentication.SchemeName;
+}).AddScheme<AuthenticationSchemeOptions, CampusAuthentication>(
+    CampusAuthentication.SchemeName,
+    option => { }
+);
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(CampusPolicy.AuthenticatedUser, CampusPolicy.AuthenticatedUserPolicy)
+    .AddPolicy(CampusPolicy.UnverifiedUser, CampusPolicy.UnverifiedUserPolicy);
+
+builder.Services.AddFastEndpoints();
+
 var app = builder.Build();
 
 app.UseAuthentication();
+
+app.UseAuthorization();
 
 app.UseFastEndpoints();
 

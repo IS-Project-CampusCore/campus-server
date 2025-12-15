@@ -17,11 +17,13 @@ namespace users;
 
 public interface IUsersServiceImplementation 
 { 
+    public Task<User?> GetUserById(string id);
+
     public Task<User?> RegisterUser(string email, string name, UserType role);
 
-    public UserWithJWT AuthUser(string email, string password);
+    public UserWithJwt AuthUser(string email, string password);
 
-    public UserWithJWT Verify(string email, string password, string verifyCode);
+    public UserWithJwt Verify(string email, string password, string verifyCode);
 
     public Task<List<User?>> RegisterUsersFromExcel(string fileName);
 
@@ -43,7 +45,12 @@ public class UsersServiceImplementation(
     private List<User> _users = [];
     private readonly Dictionary<string, string> _verificationCodes = [];
 
-    public UserWithJWT AuthUser(string email, string password)
+    public Task<User?> GetUserById(string id)
+    {
+        return Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
+    }
+
+    public UserWithJwt AuthUser(string email, string password)
     {
         User? user = FindByEmailOrDefault(email);
 
@@ -60,7 +67,7 @@ public class UsersServiceImplementation(
         }
 
         _logger.LogInformation($"User:{user} has been authenticated"); ;
-        return new UserWithJWT(user, GenerateJwtToken(user.Id, user.Email, user.Role));
+        return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Role));
     }
 
     public async Task<User?> RegisterUser(string email, string name, UserType role)
@@ -74,6 +81,7 @@ public class UsersServiceImplementation(
 
         User newUser = new User
         {
+            Id = RandomNumberGenerator.GetInt32(0, 10000).ToString(),
             Email = email,
             Name = name,
             Role = role,
@@ -113,7 +121,7 @@ public class UsersServiceImplementation(
         return newUser;
     }
 
-    public UserWithJWT Verify(string email, string password, string verifyCode)
+    public UserWithJwt Verify(string email, string password, string verifyCode)
     {
         User? user = FindByEmailOrDefault(email);
         if (user is null)
@@ -143,6 +151,7 @@ public class UsersServiceImplementation(
 
             User verifiedUser = new User
             {
+                Id = user.Id,
                 Email = email,
                 Name = user.Name,
                 PasswordHash = passwordHash,
@@ -152,7 +161,7 @@ public class UsersServiceImplementation(
 
             UpdateUser(verifiedUser);
 
-            return new UserWithJWT(verifiedUser, GenerateJwtToken(verifiedUser.Id, email, user.Role));
+            return new UserWithJwt(verifiedUser, GenerateJwtToken(verifiedUser.Id, email, user.Role));
         }
         catch (BadRequestException ex)
         {
@@ -269,9 +278,10 @@ public class UsersServiceImplementation(
 
         var claims = new[]
         {
-            new Claim(ClaimTypes.NameIdentifier, userId),
-            new Claim(ClaimTypes.Email, userEmail),
-            new Claim(ClaimTypes.Role, role.ToString())
+            new Claim(UserJwtExtensions.IdClaim, userId),
+            new Claim(UserJwtExtensions.EmailClaim, userEmail),
+            new Claim(UserJwtExtensions.RoleClaim, role.ToString().ToLowerInvariant()),
+            new Claim(UserJwtExtensions.IsVerifiedClaim, "true")
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor

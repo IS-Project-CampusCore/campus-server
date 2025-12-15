@@ -3,6 +3,8 @@ using MediatR;
 
 namespace usersServiceClient;
 
+public partial class UserIdRequest : IRequest<MessageResponse>;
+
 public partial class LoginRequest : IRequest<MessageResponse>;
 
 public partial class RegisterRequest : IRequest<MessageResponse>;

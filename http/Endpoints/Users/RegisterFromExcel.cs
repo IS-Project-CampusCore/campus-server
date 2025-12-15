@@ -1,26 +1,30 @@
 ﻿using commons.Protos;
 using FastEndpoints;
+using http.Auth;
+using http.Endpoints;
 using usersServiceClient;
 
 namespace http.Enpoints.Users;
 
 public record FileRequest(string FileName);
 
-public class RegisterFromExcel : Endpoint<FileRequest, MessageResponse>
+public class RegisterFromExcel(ILogger<RegisterFromExcel> logger) : CampusEndpoint<FileRequest>(logger)
 {
-    public usersService.usersServiceClient userServiceClient { get; set; } = default!;
+    public usersService.usersServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
         Post("api/users/register-excel");
-        AllowAnonymous();
+
+        Policies(CampusPolicy.AuthenticatedUser);
+        Roles("management");
     }
 
     public override async Task HandleAsync(FileRequest req, CancellationToken cancellationToken)
     {
         if (req is null || string.IsNullOrEmpty(req.FileName))
         {
-            await Send.ErrorsAsync(400, cancellationToken);
+            await HandleErrorsAsync(400, "Empty request", cancellationToken);
             return;
         }
 
@@ -29,21 +33,7 @@ public class RegisterFromExcel : Endpoint<FileRequest, MessageResponse>
             FileName = req.FileName
         };
 
-        try
-        {
-            MessageResponse grpcResponse = await userServiceClient.RegisterUsersFromExcelAsync(grpcRequest, null, null, cancellationToken);
-
-            if (grpcResponse.Success)
-            {
-                await Send.OkAsync(grpcResponse);
-                return;
-            }
-
-            await Send.ErrorsAsync(grpcResponse.Code);
-        }
-        catch (Exception)
-        {
-            await Send.ErrorsAsync(500);
-        }
+        MessageResponse grpcResponse = await Client.RegisterUsersFromExcelAsync(grpcRequest, null, null, cancellationToken);
+        await SendAsync(grpcResponse, cancellationToken);
     }
 }

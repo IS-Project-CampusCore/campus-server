@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <PackageReference Include="FastEndpoints" Version="7.1.0" />
+    <PackageReference Include="FastEndpoints.Swagger" Version="7.1.0" />
     <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
@@ -27,10 +28,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\SomeService\Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
-    <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
-    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="client" />
-    <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" />
+    <Protobuf Include="..\SomeService\Protos\someService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\someService.proto"/>
+    <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\usersService.proto"/>
+    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\excelService.proto"/>
+    <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\emailService.proto"/>
   </ItemGroup>
-
 </Project>

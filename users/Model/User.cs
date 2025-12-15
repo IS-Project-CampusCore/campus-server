@@ -52,4 +52,4 @@ public record User
     }
 }
 
-public record UserWithJWT(User? User, string JwtToken);
+public record UserWithJwt(User? User, string JwtToken);

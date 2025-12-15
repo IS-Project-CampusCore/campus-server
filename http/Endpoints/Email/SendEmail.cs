@@ -1,11 +1,9 @@
-﻿
-
-using commons.Protos; 
-using emailServiceClient; 
+﻿using commons.Protos;
+using emailServiceClient;
 using FastEndpoints;
 using System.Text.Json;
 
-namespace http.Endpoints;
+namespace http.Endpoints.Email;
 
 public record TemplateData(string Name);
 
@@ -17,7 +15,7 @@ public record SendEmailApiRequest(
 );
 
 
-public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
+public class SendEmail(ILogger<SendEmail> logger) : CampusEndpoint<SendEmailApiRequest>(logger)
 {
     public emailService.emailServiceClient Client { get; set; } = default!;
 
@@ -31,7 +29,7 @@ public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
     {
         string templateDataString = JsonSerializer.Serialize(req.TemplateData);
 
-        var grpcRequest = new SendEmailRequest
+        SendEmailRequest grpcRequest = new SendEmailRequest
         {
             ToEmail = req.ToEmail,
             ToName = req.ToName ?? "",
@@ -39,21 +37,7 @@ public class EmailEndpoint : Endpoint<SendEmailApiRequest, string>
             TemplateData = templateDataString
         };
 
-        try
-        {
-            var apiRes = await Client.SendEmailAsync(grpcRequest, null, null, cancellationToken);
-
-            if (apiRes.Success)
-            {
-                await Send.OkAsync(apiRes.Body);
-                return;
-            }
-
-            await Send.ErrorsAsync(apiRes.Code);
-        }
-        catch (Exception)
-        {
-            await Send.ErrorsAsync(500);
-        }
+        MessageResponse grpcResponse = await Client.SendEmailAsync(grpcRequest, null, null, cancellationToken);
+        await SendAsync(grpcResponse, cancellationToken);
     }
 }
