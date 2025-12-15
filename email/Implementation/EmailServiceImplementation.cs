@@ -4,7 +4,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace email.Services;
+namespace email.Implementation;
 
 public class EmailServiceImplementation(
     ILogger<EmailServiceImplementation> logger,
