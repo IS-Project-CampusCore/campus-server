@@ -1,29 +1,36 @@
 ﻿using commons;
 using commons.Protos;
+using email.Implementation;
 using emailServiceClient;
 using Grpc.Core;
+using MediatR;
 
 namespace email.Services;
 
 public class SendEmailMessage(
     ILogger<SendEmailMessage> logger,
     EmailServiceImplementation implementation
-) : emailService.emailServiceBase
+) : IRequestHandler<SendEmailRequest, MessageResponse>
 {
-    public override async Task<MessageResponse> SendEmail(SendEmailRequest request, ServerCallContext context)
+    private readonly EmailServiceImplementation _impl = implementation;
+    private readonly ILogger<SendEmailMessage> _logger = logger;
+
+    public async Task<MessageResponse> Handle(SendEmailRequest request, CancellationToken token)
     {
-        logger.LogInformation($"Email Request: {request.ToString()}");
+        if (request is null || string.IsNullOrEmpty(request.ToEmail) || string.IsNullOrEmpty(request.ToName) || string.IsNullOrEmpty(request.TemplateName) || string.IsNullOrEmpty(request.TemplateData))
+        {
+            _logger.LogError("Send Email Request is empty");
+            return MessageResponse.BadRequest("Send Email Request is empty");
+        }
 
         try
         {
-            await implementation.SendEmail(request); 
+            await _impl.SendEmail(request); 
 
-            logger.LogInformation($"The request has been processed succesffuly");
             return MessageResponse.Ok();
         }
         catch (ServiceMessageException ex)
         {
-            logger.LogError($"The request has failled with error: {ex.Message}");
             return ex.ToResponse();
         }
     }
