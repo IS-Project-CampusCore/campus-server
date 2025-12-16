@@ -11,6 +11,11 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
 {
     private readonly IMediator _mediator = mediator;
 
+    public override async Task<MessageResponse> GetUserById(UserIdRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+
     public override async Task<MessageResponse> Login(LoginRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request);

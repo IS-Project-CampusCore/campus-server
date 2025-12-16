@@ -8,11 +8,18 @@ package usersService;
 
 service usersService
 { 
+    rpc GetUserById (UserIdRequest) returns (commons.protos.MessageResponse);
+
     rpc Verify (VerifyRequest) returns (commons.protos.MessageResponse);
     rpc Login (LoginRequest) returns (commons.protos.MessageResponse);
     rpc Register (RegisterRequest) returns (commons.protos.MessageResponse);
     
     rpc RegisterUsersFromExcel (UsersExcelRequest) returns (commons.protos.MessageResponse);
+}
+
+message UserIdRequest
+{
+    string id = 1;
 }
 
 message VerifyRequest

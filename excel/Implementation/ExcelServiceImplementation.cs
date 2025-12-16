@@ -141,9 +141,8 @@ public class ExcelServiceImplementation(
                         _logger.LogWarning($"Data missing from the cell:({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
                         rowValues.Add(null);
                     }
-
-                    result.Rows.Add(rowValues);
                 }
+                result.Rows.Add(rowValues);
             }
         }
         catch (NotFoundException)

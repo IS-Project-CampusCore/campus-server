@@ -1,14 +1,15 @@
 ﻿using commons.Protos;
 using FastEndpoints;
+using http.Endpoints;
 using usersServiceClient;
 
 namespace http.Enpoints.Users;
 
 public record LoginApiRequest(string Email, string Password);
 
-public class Login : Endpoint<LoginApiRequest, MessageResponse>
+public class Login(ILogger<Login> logger) : CampusEndpoint<LoginApiRequest>(logger)
 {
-    public usersService.usersServiceClient userServiceClient { get; set; } = default!;
+    public usersService.usersServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
@@ -20,7 +21,7 @@ public class Login : Endpoint<LoginApiRequest, MessageResponse>
     {
         if (req is null || string.IsNullOrEmpty(req.Email) || string.IsNullOrEmpty(req.Password))
         {
-            await Send.ErrorsAsync(400, cancellationToken);
+            await HandleErrorsAsync(400, "Empty request", cancellationToken);
             return;
         }
 
@@ -30,21 +31,7 @@ public class Login : Endpoint<LoginApiRequest, MessageResponse>
             Password = req.Password,
         };
 
-        try
-        {
-            MessageResponse grpcResponse = userServiceClient.Login(grpcRequest, null, null, cancellationToken);
-
-            if (grpcResponse.Success)
-            {
-                await Send.OkAsync(grpcResponse);
-                return;
-            }
-
-            await Send.ErrorsAsync(grpcResponse.Code);
-        }
-        catch (Exception)
-        {
-            await Send.ErrorsAsync(500);
-        }
+        MessageResponse grpcResponse = Client.Login(grpcRequest, null, null, cancellationToken);
+        await SendAsync(grpcResponse, cancellationToken);
     }
 }
