@@ -1,20 +1,20 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-COPY MyGrpcService/MyGrpcService.csproj ./MyGrpcService/
+COPY __CAMEL_NAME__/__CAMEL_NAME__.csproj ./__CAMEL_NAME__/
 
-RUN dotnet restore MyGrpcService/MyGrpcService.csproj
+RUN dotnet restore __CAMEL_NAME__/__CAMEL_NAME__.csproj
 
 COPY . .
 
-WORKDIR "/src/MyGrpcService"
-RUN dotnet publish "MyGrpcService.csproj" -c Release -o /app/publish
+WORKDIR "/src/__CAMEL_NAME__"
+RUN dotnet publish "__CAMEL_NAME__.csproj" -c Release -o /app/publish
 
 FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=build /app/publish .
-ENTRYPOINT ["dotnet", "MyGrpcService.dll"]
+ENTRYPOINT ["dotnet", "__CAMEL_NAME__.dll"]
 
 
 

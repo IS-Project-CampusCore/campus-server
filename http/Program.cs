@@ -2,13 +2,8 @@ using excelServiceClient;
 using FastEndpoints;
 using http.Auth;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
-using Microsoft.IdentityModel.Tokens;
 using Serilog;
-using someServiceClient;
-using System.Security.Claims;
-using System.Text;
 using usersServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
@@ -36,12 +31,6 @@ builder.WebHost.ConfigureKestrel(options =>
 });
 
 builder.Services.AddGrpc();
-
-builder.Services.AddGrpcClient<someService.someServiceClient>(o =>
-{
-    string? address = builder.Configuration["GrpcServices:SomeService"];
-    o.Address = new Uri(address!);
-});
 
 builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
 {
