@@ -3,6 +3,8 @@ using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using MyGrpcService.Services;
 using commons;
+using MyGrpcService;
+using MyGrpcService.Implementation;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,15 +27,18 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MyGrpcServiceService).Assembly));
+
 builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
 });
 builder.Services.AddScoped<ServiceInterceptor>();
 
+builder.Services.AddSingleton<MyGrpcServiceServiceImplementation>();
+
 var app = builder.Build();
 
-app.MapGrpcService<MyGrpcServiceMessage>();
-app.MapGet("/", () => "gRPC service 'MyGrpcService' is running.");
+app.MapGrpcService<MyGrpcServiceService>();
 
 app.Run();

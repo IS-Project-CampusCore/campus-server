@@ -19,6 +19,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="MediatR" Version="13.1.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
@@ -29,7 +30,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\MyGrpcServiceService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
+    <Protobuf Include="Protos\__CAMEL_NAME__Service.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
   </ItemGroup>
 
 </Project>

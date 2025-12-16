@@ -10,7 +10,6 @@ services:
       # Docker Compose creates a network where the container 'someservice'
       # can be reached just by its name.
       - ASPNETCORE_ENVIRONMENT=Development
-      - GrpcServices__SomeService=http://someservice:8080
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
@@ -21,27 +20,9 @@ services:
       - Logging__LogLevel__System.Net.Http=Warning
       - Logging__LogLevel__Grpc=Warnin
     depends_on:
-      - someservice # Tells Docker to start someservice *before* this one
       - users
       - email
       - excel
-      - seq
-
-  # This is your 'someService' gRPC service
-  someservice:
-    build:
-      context: .  # Path to the SomeService Dockerfile
-      dockerfile: ./SomeService/Dockerfile
-    ports:
-      - "8081:8080" # Map your computer's port 8081 (to avoid conflict)
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - Logging__SeqUrl=http://seq
-      - Logging__LogLevel__Default=Information
-      - Logging__LogLevel__Microsoft.AspNetCore=Warning
-      - Logging__LogLevel__System.Net.Http=Warning
-      - Logging__LogLevel__Grpc=Warnin
-    depends_on:
       - seq
 
   seq:
@@ -57,7 +38,7 @@ services:
       context: .
       dockerfile: ./users/Dockerfile
     ports:
-      - "8082:8080"
+      - "8081:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__EmailService=http://email:8080 
@@ -74,7 +55,7 @@ services:
       context: .
       dockerfile: ./email/Dockerfile
     ports:
-      - "8083:8080"
+      - "8082:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
@@ -86,7 +67,7 @@ services:
       context: .
       dockerfile: ./excel/Dockerfile
     ports:
-      - "8084:8080"
+      - "8083:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
@@ -94,3 +75,15 @@ services:
       - seq
     volumes:
       - ./FileStorage:/app/FileStorage
+
+  grades:
+    build:
+      context: .
+      dockerfile: ./grades/Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq

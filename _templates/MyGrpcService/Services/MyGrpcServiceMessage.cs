@@ -1,34 +1,22 @@
 ﻿using Grpc.Core;
-using MyGrpcServiceServiceClient;
 using commons;
 using commons.Protos;
+using __CAMEL_NAME__ServiceClient;
+using MediatR;
+using MyGrpcService.Implementation;
 
 namespace MyGrpcService.Services;
 
-public class MyGrpcServiceMessage : MyGrpcServiceService.MyGrpcServiceServiceBase
+public class ExampleMessage(
+    ILogger<ExampleMessage> logger,
+    MyGrpcServiceServiceImplementation implementation
+) : IRequestHandler<ExampleRequest, MessageResponse>
 {
-    private readonly ILogger<MyGrpcServiceMessage> _logger;
+    private readonly MyGrpcServiceServiceImplementation _impl = implementation;
+    private readonly ILogger<ExampleMessage> _logger = logger;
 
-    public MyGrpcServiceMessage(ILogger<MyGrpcServiceMessage> logger)
+    public Task<MessageResponse> Handle(ExampleRequest request, CancellationToken token)
     {
-        _logger = logger;
-    }
-
-    public override Task<MessageResponse> DoSomething(MyMessageRequest request, ServerCallContext context)
-    {
-        _logger.LogInformation("Processing 'DoSomething' request: {Message}", request.Message);
-
-        if (string.IsNullOrEmpty(request.Message))
-        {
-            throw new BadRequestException("Message cannot be empty.");
-        }
-
-        var responseBody = new MyMessageResponse
-        {
-            ResponseMessage = "You sent: " + request.Message
-        };
-
-        // Use the helper from your 'commons' project to pack the response
-        return Task.FromResult(MessageResponse.Ok(responseBody));
+        return Task.FromResult(MessageResponse.Ok());
     }
 }
