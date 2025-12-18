@@ -57,24 +57,43 @@ public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, MessageBo
         {
             case 400:
                 logger.LogDebug("400: {error}", err);
-                if (!string.IsNullOrEmpty(err))
-                {
-                    AddError(err);
-                }
-
-                ThrowIfAnyErrors();
+                await Send.ResultAsync(Results.Problem(
+                    statusCode: 400,
+                    detail: err,
+                    title: "Bad Request")
+                    );
                 return;
             case 401:
                 logger.LogDebug("401: {error}", err);
-                await Send.UnauthorizedAsync(cancellationToken);
+                await Send.ResultAsync(Results.Problem(
+                    statusCode: 401,
+                    detail: err,
+                    title: "Unauthorized")
+                    );
                 return;
             case 403:
                 logger.LogDebug("403: {error}", err);
-                await Send.ForbiddenAsync(cancellationToken);
+                await Send.ResultAsync(Results.Problem(
+                    statusCode: 403,
+                    detail: err,
+                    title: "Forbidden")
+                    );
                 return;
             case 404:
                 logger.LogDebug("404: {error}", err);
-                await Send.NotFoundAsync(cancellationToken);
+                await Send.ResultAsync(Results.Problem(
+                    statusCode: 404,
+                    detail: err,
+                    title: "Not Found")
+                    );
+                return;
+            case 500:
+                logger.LogDebug("500: {error}", err);
+                await Send.ResultAsync(Results.Problem(
+                    statusCode: 500,
+                    detail: err,
+                    title: "Unhandled Error")
+                    );
                 return;
         }
     }

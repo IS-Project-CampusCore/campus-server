@@ -1,29 +1,49 @@
 ﻿using ClosedXML.Excel;
 using commons;
+using commons.Database;
+using commons.Tools;
 using excel.Models;
+using MongoDB.Driver;
 
 namespace excel.Implementation;
 
 public class ExcelServiceImplementation(
     ILogger<ExcelServiceImplementation> logger,
+    IDatabase database,
     IConfiguration config)
 {
     private readonly ILogger<ExcelServiceImplementation> _logger = logger;
+    private readonly AsyncLazy<IDatabaseCollection<ExcelDocument>> _documents = new(() => GetExcelCollection(database));
 
     private string _basePath => config["StorageDir"] ?? "FileStorage/ExcelFiles";
-    private readonly Dictionary<string, ExcelDocument> _store = [];
 
-    public async Task<ExcelDocument> UpsertAsync(string fileName, byte[] content) => _store.TryGetValue(fileName, out _) ? await UpdateAsync(fileName, content) : await InsertAsync(fileName, content);
+    public async Task<ExcelDocument> UpsertAsync(string fileName, byte[] content)
+    {
+        var documents = await _documents;
+
+        ExcelDocument document;
+        if (await documents.ExistsAsync(ed => ed.FileName == fileName))
+        {
+            document = await UpdateAsync(fileName, content);
+        }
+        else
+        {
+            document = await InsertAsync(fileName, content);
+        }
+
+        return document;
+    }
 
     public async Task<ExcelDocument> InsertAsync(string fileName, byte[] content)
     {
-        if (_store.TryGetValue(fileName, out _))
+        var documents = await _documents;
+
+        if (await documents.ExistsAsync(ed => ed.FileName == fileName))
         {
-            throw new InternalErrorException("File already exists");
+            throw new BadRequestException($"File {fileName} already exists");
         }
 
         var filePath = Path.Combine(_basePath, fileName);
-
         var directory = Path.GetDirectoryName(filePath);
 
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -40,16 +60,20 @@ public class ExcelServiceImplementation(
             FileName = fileName,
             FilePath = filePath,
             UploadedAt = DateTime.UtcNow,
+            LastModifiedAt = DateTime.UtcNow,
             Hash = hash,
         };
-        _store[fileName] = newDoc;
 
+        await documents.InsertAsync(newDoc);
         return newDoc;
     }
 
     public async Task<ExcelDocument> UpdateAsync(string fileName, byte[] content)
     {
-        if (!_store.TryGetValue(fileName, out var existingDoc) || existingDoc is null)
+        var documents = await _documents;
+
+        ExcelDocument existingDoc = await documents.GetOneAsync(ed => ed.FileName == fileName);
+        if (existingDoc is null)
         {
             throw new NotFoundException($"File:{fileName} does not exist");
         }
@@ -69,20 +93,24 @@ public class ExcelServiceImplementation(
         {
             FileName = fileName,
             FilePath = filePath,
-            UploadedAt = DateTime.UtcNow,
+            UploadedAt = existingDoc.UploadedAt,
+            LastModifiedAt = DateTime.UtcNow,
             Hash = newHash,
         };
 
-        _store[fileName] = updatedDoc;
-
+        await documents.ReplaceAsync(updatedDoc);
         return updatedDoc;
     }
 
-    public ExcelData ParseExcelFile(string fileName)
+    public async Task<ExcelData> ParseExcelFile(string fileName)
     {
         var result = new ExcelData();
 
-        if (!_store.ContainsKey(fileName))
+        var documents = await _documents;
+
+        var document = documents.GetOneAsync(ed => ed.FileName == fileName);
+
+        if (document is null)
         {
             throw new NotFoundException($"File {fileName} is not in database");
         }
@@ -166,5 +194,26 @@ public class ExcelServiceImplementation(
         using var sha = System.Security.Cryptography.SHA256.Create();
         var hashBytes = sha.ComputeHash(content);
         return Convert.ToBase64String(hashBytes);
+    }
+
+    internal static async Task<IDatabaseCollection<ExcelDocument>> GetExcelCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<ExcelDocument>();
+
+        var nameIndex = Builders<ExcelDocument>.IndexKeys.Ascending(ed => ed.FileName);
+        var hashIndex = Builders<ExcelDocument>.IndexKeys.Ascending(ed => ed.Hash);
+
+        CreateIndexModel<ExcelDocument> index1 = new(nameIndex, new CreateIndexOptions
+        {
+            Name = "excelNameIndex"
+        });
+
+        CreateIndexModel<ExcelDocument> index2 = new(hashIndex, new CreateIndexOptions
+        {
+            Name = "excelHashIndex"
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1, index2]);
+        return collection;
     }
 }

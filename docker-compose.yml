@@ -1,4 +1,14 @@
+volumes:
+  mongo_data:
+
 services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
   httpservice:
     build:
       context: .  # Path to the HttpService Dockerfile
@@ -71,19 +81,9 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=excel
     depends_on:
       - seq
     volumes:
       - ./FileStorage:/app/FileStorage
-
-  grades:
-    build:
-      context: .
-      dockerfile: ./grades/Dockerfile
-    ports:
-      - "8084:8080"
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - Logging__SeqUrl=http://seq
-    depends_on:
-      - seq

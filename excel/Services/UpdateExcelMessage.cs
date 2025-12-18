@@ -30,6 +30,10 @@ public class UpdateExcelMessage(
 
             return MessageResponse.Ok(excelData);
         }
+        catch (NotFoundException ex)
+        {
+            return MessageResponse.NotFound(ex.Message);
+        }
         catch (Exception ex)
         {
             return MessageResponse.Error(ex);
