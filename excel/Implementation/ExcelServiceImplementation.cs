@@ -91,6 +91,7 @@ public class ExcelServiceImplementation(
 
         ExcelDocument updatedDoc = new ExcelDocument
         {
+            Id = existingDoc.Id,
             FileName = fileName,
             FilePath = filePath,
             UploadedAt = existingDoc.UploadedAt,
