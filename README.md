@@ -122,9 +122,9 @@ It uses *HTTP2* for Service-to-Service communication exposing a **gRPC Server** 
 #### 3. gRPC Communication Design
 
 This design uses an atypical gRPC communication design with a *common response message*. The main features of this communication architecure are:
-	* **Endpoint abstraction classes**: ```CampusEndpointBase``` & ```CampusEndpoint``` used to implement common parts of REST API Requests and and Responses using FastEndpoint NuGet Packedge.
-	* **Service middle ware class**: ```SerivceInterceptor``` inherits ```Interceptor``` class from Grpc.Core NuGet Packedge and is used to intercept any request, procces the response and handle any errors.
-	* **MediatR pattern**: each service uses a mediator to send request, using this pattern every massage cand be implemented individually and be separated in levels of concern, this is also a dev friendly implementation that makes the code cleaner. This pattern comes with suplimentary logic to work, the request class needs to implement IRequest<MessageResponse> and the message class needs to implement IRequestHandler<TReq, MessageResponse>.
+ * **Endpoint abstraction classes**: ```CampusEndpointBase``` & ```CampusEndpoint``` used to implement common parts of REST API Requests and and Responses using FastEndpoint NuGet Packedge.
+ * **Service middle ware class**: ```SerivceInterceptor``` inherits ```Interceptor``` class from Grpc.Core NuGet Packedge and is used to intercept any request, procces the response and handle any errors.
+ * **MediatR pattern**: each service uses a mediator to send request, using this pattern every massage cand be implemented individually and be separated in levels of concern, this is also a dev friendly implementation that makes the code cleaner. This pattern comes with suplimentary logic to work, the request class needs to implement IRequest<MessageResponse> and the message class needs to implement IRequestHandler<TReq, MessageResponse>.
 
 ##### 1. Common Messages Response
 
