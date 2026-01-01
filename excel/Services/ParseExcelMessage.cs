@@ -16,23 +16,23 @@ public class ParseExcelMessage(
     private readonly ExcelServiceImplementation _impl = implementation;
     private readonly ILogger<ParseExcelMessage> _logger = logger;
 
-    public Task<MessageResponse> Handle(ParseExcelRequest request, CancellationToken token)
+    public async Task<MessageResponse> Handle(ParseExcelRequest request, CancellationToken token)
     {
         if (string.IsNullOrEmpty(request.FileName))
         {
             _logger.LogError("ParseExcel Request is empty");
-            return Task.FromResult(MessageResponse.BadRequest("ParseExcel Request is empty"));
+            return MessageResponse.BadRequest("ParseExcel Request is empty");
         }
 
         try
         {
-            ExcelData excelData = _impl.ParseExcelFile(request.FileName);
+            ExcelData excelData = await _impl.ParseExcelFile(request.FileName);
 
-            return Task.FromResult(MessageResponse.Ok(excelData));
+            return MessageResponse.Ok(excelData);
         }
         catch (Exception ex)
         {
-            return Task.FromResult(MessageResponse.Error(ex));
+            return MessageResponse.Error(ex);
         }
     }
 }

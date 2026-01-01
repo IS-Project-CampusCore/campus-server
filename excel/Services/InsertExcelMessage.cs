@@ -26,8 +26,12 @@ public class InsertExcelMessage(
         try
         {
             ExcelDocument excelData = await _impl.InsertAsync(request.FileName, request.Content.ToArray());
-
+        
             return MessageResponse.Ok(excelData);
+        }
+        catch (BadRequestException ex)
+        {
+            return MessageResponse.BadRequest(ex.Message);
         }
         catch (Exception ex)
         {

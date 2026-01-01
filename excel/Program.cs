@@ -1,11 +1,12 @@
+using commons;
+using commons.Database;
+using excel;
+using excel.Implementation;
+using excel.Services;
+using excelServiceClient;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using excel.Services;
-using commons;
-using excelServiceClient;
-using excel.Implementation;
-using excel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,11 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
         listenOptions.Protocols = HttpProtocols.Http2;
     });
 });
+
+string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
+string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
+
+builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ExcelService).Assembly));
 
