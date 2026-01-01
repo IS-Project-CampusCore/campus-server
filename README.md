@@ -4,6 +4,11 @@
 
 This repo contains the server architecture and business logic of CampusCore App made for Software Engineering laboratory project.
 
+### 1. Use-case Diagram
+
+The actors and the use cases are sown in the diagram below:
+<img width="1687" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/883af568-6db3-41c0-a196-991b78da7fe8" />
+
 ## Installation
 
 //TO BE ADDED AFTER PROJECT IS FINISHED
@@ -116,11 +121,14 @@ It uses *HTTP2* for Service-to-Service communication exposing a **gRPC Server** 
 
 #### 3. gRPC Communication Design
 
-This design uses an atypical gRPC communication design with a *common response message* 
+This design uses an atypical gRPC communication design with a *common response message*. The main features of this communication architecure are:
+	* **Endpoint abstraction classes**: ```CampusEndpointBase``` & ```CampusEndpoint``` used to implement common parts of REST API Requests and and Responses using FastEndpoint NuGet Packedge.
+	* **Service middle ware class**: ```SerivceInterceptor``` inherits ```Interceptor``` class from Grpc.Core NuGet Packedge and is used to intercept any request, procces the response and handle any errors.
+	* **MediatR pattern**: each service uses a mediator to send request, using this pattern every massage cand be implemented individually and be separated in levels of concern, this is also a dev friendly implementation that makes the code cleaner. This pattern comes with suplimentary logic to work, the request class needs to implement IRequest<MessageResponse> and the message class needs to implement IRequestHandler<TReq, MessageResponse>.
 
 ##### 1. Common Messages Response
 
-For each service message the response is common and it is defined in ``````. The reasons behind this implementation are:
+For each service message the response is common and it is defined in ```MessageResponse```. The reasons behind this implementation are:
 * **Better message agregation**: Because the services needs to communicate with eachother and aggregate their responses to other services and the API Gateway this design makes the communication easier.
 * **Better error handling**: Because all the messages returns the same response this simplify the error handling process and error response just by using ```ServiceMessageException.cs```.
 
@@ -158,9 +166,4 @@ The communication path is show in the below diagram:
 <img width="861" height="561" alt="CommunicationDiagram drawio (1)" src="https://github.com/user-attachments/assets/a38e172a-1e27-4329-8ead-cc170f1757dc" />
 
 * This communication represent the data path for between API Gataway and API, it also represents a simple two service communication and the ServiceInterceptor role as a middle ware system.
-
-##### 3. Use-case Diagram
-
-The actors and the use cases are sown in the diagram below:
-<img width="1687" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/883af568-6db3-41c0-a196-991b78da7fe8" />
 
