@@ -1,6 +1,10 @@
 volumes:
   mongo_data:
 
+networks:
+  campus-network:
+    driver: bridge
+
 services:
   mongo:
     image: mongo:latest
@@ -8,40 +12,53 @@ services:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    networks:
+      - campus-network
 
-  httpservice:
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - campus-network
+
+  http:
     build:
-      context: .  # Path to the HttpService Dockerfile
+      context: .
       dockerfile: ./http/Dockerfile
     ports:
-      - "8080:8080"  # Map your computer's port 8080 to the container's port 8080
+      - "8080:8080"
     environment:
-      # This is how you pass configuration.
-      # Docker Compose creates a network where the container 'someservice'
-      # can be reached just by its name.
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
+      - GrpcServices__ChatService=http://chat:8080 
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
       - Logging__LogLevel__System.Net.Http=Warning
-      - Logging__LogLevel__Grpc=Warnin
+      - Logging__LogLevel__Grpc=Warning
     depends_on:
       - users
       - email
       - excel
+      - chat
       - seq
+    networks:
+      - campus-network
 
   seq:
     image: datalust/seq:latest
     ports:
-      - "5342:80"   # Expose the Seq UI on your computer at port 5341
+      - "5342:80"
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    networks:
+      - campus-network
 
   users:
     build:
@@ -59,6 +76,8 @@ services:
       - email
       - excel
       - seq
+    networks:
+      - campus-network
 
   email:
     build:
@@ -71,6 +90,8 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+    networks:
+      - campus-network
   
   excel:
     build:
@@ -87,3 +108,43 @@ services:
       - seq
     volumes:
       - ./FileStorage:/app/FileStorage
+    networks:
+      - campus-network
+  
+  chat:
+    build:
+      context: .
+      dockerfile: ./chat/Dockerfile
+    ports:
+      - "8084:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - GrpcServices__UsersService=http://users:8080
+      - Logging__SeqUrl=http://seq
+      - RabbitMq__Host=rabbitmq
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=chat
+    depends_on:
+      - seq
+      - users
+      - rabbitmq
+    volumes:
+      - ./FileStorage:/app/FileStorage
+    networks:
+      - campus-network
+
+  notification:
+    build:
+      context: .
+      dockerfile: ./notification/Dockerfile
+    ports:
+      - "8085:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+      - RabbitMq__Host=rabbitmq
+    depends_on:
+      - seq
+      - rabbitmq
+    networks:
+      - campus-network

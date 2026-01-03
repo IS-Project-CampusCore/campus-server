@@ -161,7 +161,7 @@ public readonly struct MessageBody
 
     public readonly MessageBody Object() => new(ValidateJsonOrThrow(JsonValueKind.Object));
 
-    public readonly JsonElement Array() => ValidateJsonOrThrow(JsonValueKind.Array);
+    public readonly MessageBody Array() => new(ValidateJsonOrThrow(JsonValueKind.Array));
 
     public readonly string? TryString() => Validate(JsonValueKind.String) ? _json.GetString() : null;
    
@@ -169,7 +169,7 @@ public readonly struct MessageBody
 
     public readonly MessageBody? TryObj() => Validate(JsonValueKind.Object) ? new(_json) : null;
 
-    public readonly JsonElement? TryArray() => Validate(JsonValueKind.Array) ? _json : null;
+    public readonly MessageBody? TryArray() => Validate(JsonValueKind.Array) ? new(_json) : null;
 
     public readonly string? TryGetString(string property) =>
         TryGetProperty(property, JsonValueKind.String) is { } prop ? prop.GetString() : null;
@@ -180,8 +180,8 @@ public readonly struct MessageBody
     public readonly MessageBody? TryGetObject(string property) => 
         TryGetProperty(property, JsonValueKind.Object) is { } prop ? new(prop) : null;
 
-    public readonly JsonElement? TryGetArray(string property) => 
-        TryGetProperty(property, JsonValueKind.Array) is { } prop ? prop : null;
+    public readonly MessageBody? TryGetArray(string property) => 
+        TryGetProperty(property, JsonValueKind.Array) is { } prop ? new(prop) : null;
 
     public readonly string GetString(string property) =>
         GetPropertyAndValidate(property, JsonValueKind.String).GetString()!;
@@ -192,8 +192,17 @@ public readonly struct MessageBody
     public readonly MessageBody GetObject(string property) =>
     new(GetPropertyAndValidate(property, JsonValueKind.Object));
 
-    public readonly JsonElement GetArray(string property) =>
-        GetPropertyAndValidate(property, JsonValueKind.Array);
+    public readonly MessageBody GetArray(string property) =>
+        new(GetPropertyAndValidate(property, JsonValueKind.Array));
+
+    public readonly IEnumerable<MessageBody> Iterate()
+    {
+        if (!Validate(JsonValueKind.Array))
+            throw new ArgumentException("Can not iterate message body. Expected array");
+
+        return _json.EnumerateArray().Select(json => new MessageBody(json));
+    }
+    public readonly IEnumerable<string> IterateStrings() => Iterate().Select(e => e.String());
 
     private readonly JsonElement GetPropertyAndValidate(string propertyName, JsonValueKind expectedKind)
     {

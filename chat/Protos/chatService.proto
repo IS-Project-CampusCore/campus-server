@@ -1,0 +1,72 @@
+syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "chatServiceClient";
+
+package chatService;
+
+service chatService
+{ 
+    rpc CreateGroup (CreateGroupRequest) returns (commons.protos.MessageResponse);
+    rpc AddGroupMember (AddMemberRequest) returns (commons.protos.MessageResponse);
+    rpc RemoveGroupMember (RemoveMemberRequest) returns (commons.protos.MessageResponse);
+    rpc GetUserGroups (GetGroupsRequest) returns (commons.protos.MessageResponse);
+
+    rpc UploadFile (UploadFileRequest) returns (commons.protos.MessageResponse);
+    rpc GetFile (GetFileRequest) returns (commons.protos.MessageResponse);
+
+    rpc SendMessage (SendMessageRequest) returns (commons.protos.MessageResponse);
+    rpc GetHistory (GetHistoryRequest) returns (commons.protos.MessageResponse);
+}
+
+message CreateGroupRequest
+{
+    string name = 1;
+    string adminId = 2;
+}
+
+message AddMemberRequest
+{
+    string groupId = 1;
+    string memberId = 2;
+}
+
+message RemoveMemberRequest
+{
+    string groupId = 1;
+    string memberId = 2;
+}
+
+message GetGroupsRequest
+{
+    string memberId = 1;
+}
+
+message UploadFileRequest
+{
+    string name = 1;
+    string groupId = 2;
+    bytes data = 3;
+}
+
+message GetFileRequest
+{
+    string fileId = 1;
+}
+
+message SendMessageRequest
+{
+    string senderId = 1;
+    string groupId = 2;
+    optional string content = 3;
+    repeated string filesId = 4;
+}
+
+message GetHistoryRequest
+{
+    string reciverId = 1;
+    string groupId = 2;
+    int32 skip = 3;
+    int32 limit = 4;
+}
