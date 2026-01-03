@@ -15,11 +15,11 @@ public class CampusEndpoint<TReq>(ILogger logger) : CampusEndpointBase<TReq>(log
             return;
         }
 
-        await Send.OkAsync(response.Payload, cancellationToken);
+        await Send.OkAsync(response, cancellationToken);
     }
 }
 
-public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, MessageBody> where TReq : notnull
+public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, MessageResponse> where TReq : notnull
 {
     protected void AllowUnverifiedUser()
     {
