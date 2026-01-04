@@ -17,6 +17,6 @@ public class SendMessage(
 
     public Task<MessageResponse> Handle(SendMessageRequest request, CancellationToken token)
     {
-        return Task.FromResult(MessageResponse.Ok());
+        if (request is null || request.) {
     }
 }
