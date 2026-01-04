@@ -2,6 +2,8 @@
 using FastEndpoints;
 using http.Auth;
 using commons;
+using System.Net;
+using System.Text.Json;
 
 namespace http.Endpoints;
 
@@ -15,11 +17,11 @@ public class CampusEndpoint<TReq>(ILogger logger) : CampusEndpointBase<TReq>(log
             return;
         }
 
-        await Send.OkAsync(response.Payload, cancellationToken);
+        await Send.OkAsync(response.Payload.Json, cancellationToken);
     }
 }
 
-public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, MessageBody> where TReq : notnull
+public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, JsonElement> where TReq : notnull
 {
     protected void AllowUnverifiedUser()
     {
@@ -57,43 +59,25 @@ public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, MessageBo
         {
             case 400:
                 logger.LogDebug("400: {error}", err);
-                await Send.ResultAsync(Results.Problem(
-                    statusCode: 400,
-                    detail: err,
-                    title: "Bad Request")
-                    );
+                AddError(err ?? "Bad request", ((HttpStatusCode)400).ToString());
+                await Send.ErrorsAsync(400, cancellationToken);
                 return;
             case 401:
                 logger.LogDebug("401: {error}", err);
-                await Send.ResultAsync(Results.Problem(
-                    statusCode: 401,
-                    detail: err,
-                    title: "Unauthorized")
-                    );
+                await Send.UnauthorizedAsync(cancellationToken);
                 return;
             case 403:
                 logger.LogDebug("403: {error}", err);
-                await Send.ResultAsync(Results.Problem(
-                    statusCode: 403,
-                    detail: err,
-                    title: "Forbidden")
-                    );
+                await Send.ForbiddenAsync(cancellationToken);
                 return;
             case 404:
                 logger.LogDebug("404: {error}", err);
-                await Send.ResultAsync(Results.Problem(
-                    statusCode: 404,
-                    detail: err,
-                    title: "Not Found")
-                    );
+                await Send.NotFoundAsync(cancellationToken);
                 return;
             case 500:
                 logger.LogDebug("500: {error}", err);
-                await Send.ResultAsync(Results.Problem(
-                    statusCode: 500,
-                    detail: err,
-                    title: "Unhandled Error")
-                    );
+                AddError(err ?? "Internal rrror", ((HttpStatusCode)500).ToString());
+                await Send.ErrorsAsync(500, cancellationToken);
                 return;
         }
     }
