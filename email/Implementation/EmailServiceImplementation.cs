@@ -1,4 +1,4 @@
-﻿using commons;
+﻿using commons.RequestBase;
 using emailServiceClient;
 using System.Text;
 using System.Text.Json;

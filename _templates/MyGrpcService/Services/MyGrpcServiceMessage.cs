@@ -10,13 +10,10 @@ namespace MyGrpcService.Services;
 public class ExampleMessage(
     ILogger<ExampleMessage> logger,
     MyGrpcServiceServiceImplementation implementation
-) : IRequestHandler<ExampleRequest, MessageResponse>
+) : CampusMessage<ExampleRequest>(logger)
 {
     private readonly MyGrpcServiceServiceImplementation _impl = implementation;
-    private readonly ILogger<ExampleMessage> _logger = logger;
 
-    public Task<MessageResponse> Handle(ExampleRequest request, CancellationToken token)
-    {
-        return Task.FromResult(MessageResponse.Ok());
-    }
+    protected override Task HandleMessage(ExampleRequest request, CancellationToken token) =>
+        Task.CompletedTask;
 }

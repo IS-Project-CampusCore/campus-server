@@ -10,7 +10,7 @@ using System.Reflection.Metadata;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace commons;
+namespace commons.RequestBase;
 
 public class ServiceInterceptor(ILogger<ServiceInterceptor> logger) : Interceptor
 {
