@@ -1,41 +1,17 @@
-﻿using commons;
-using commons.Protos;
+﻿using commons.RequestBase;
 using excel.Implementation;
 using excel.Models;
 using excelServiceClient;
-using MediatR;
 
 namespace excel.Services;
 
 public class InsertExcelMessage(
     ILogger<InsertExcelMessage> logger,
     ExcelServiceImplementation implementation
-) : IRequestHandler<InsertExcelRequest, MessageResponse>
+) : CampusMessage<InsertExcelRequest, ExcelDocument>(logger)
 {
     private readonly ExcelServiceImplementation _impl = implementation;
-    private readonly ILogger<InsertExcelMessage> _logger = logger;
 
-    public async Task<MessageResponse> Handle(InsertExcelRequest request, CancellationToken token)
-    {
-        if (string.IsNullOrEmpty(request.FileName) || request.Content is null ||request.Content.IsEmpty)
-        {
-            _logger.LogError("Excel Request is empty");
-            return MessageResponse.BadRequest("Excel Request is empty");
-        }
-
-        try
-        {
-            ExcelDocument excelData = await _impl.InsertAsync(request.FileName, request.Content.ToArray());
-        
-            return MessageResponse.Ok(excelData);
-        }
-        catch (BadRequestException ex)
-        {
-            return MessageResponse.BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return MessageResponse.Error(ex);
-        }
-    }
+    protected override async Task<ExcelDocument> HandleMessage(InsertExcelRequest request, CancellationToken token)
+        => await _impl.InsertAsync(request.FileName, request.Content.ToArray());
 }

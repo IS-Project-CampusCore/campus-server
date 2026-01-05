@@ -1,14 +1,46 @@
-﻿using commons.Protos;
-using MediatR;
+﻿using commons.RequestBase;
+using users.Model;
 
 namespace usersServiceClient;
 
-public partial class UserIdRequest : IRequest<MessageResponse>;
+public partial class UserIdRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(Id) ? "User Id can not be empty." : null;
+}
 
-public partial class LoginRequest : IRequest<MessageResponse>;
+public partial class LoginRequest : IRequestBase
+{
+    public string? Validate()
+    {
+        if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password))
+            return "Login Request can not be empty.";
+        return null;
+    }
+}
 
-public partial class RegisterRequest : IRequest<MessageResponse>;
+public partial class RegisterRequest : IRequestBase
+{
+    public string? Validate()
+    {
+        if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Name) || string.IsNullOrEmpty(Role))
+            return "Register Request can not be empty.";
+        if (User.StringToRole(Role) == UserType.NO_ROLE)
+            return "Register Request role is invalid";
+        return null;
+    }
+}
 
-public partial class VerifyRequest : IRequest<MessageResponse>;
+public partial class VerifyRequest : IRequestBase
+{
+    public string? Validate()
+    {
+        if (string.IsNullOrEmpty(Email) || string.IsNullOrEmpty(Password) || string.IsNullOrEmpty(Code))
+            return "Verify Request can not be empty.";
+        return null;
+    }
+}
 
-public partial class UsersExcelRequest : IRequest<MessageResponse>;
+public partial class UsersExcelRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(FileName) ? "File Name can not be empty" : null;
+}

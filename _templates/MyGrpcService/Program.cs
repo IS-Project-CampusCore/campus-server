@@ -8,15 +8,11 @@ using MyGrpcService.Implementation;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seqUrl = builder.Configuration["Logging:SeqUrl"];
 builder.Host.UseSerilog((context, config) =>
 {
     config
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .ReadFrom.Configuration(builder.Configuration)
-        .WriteTo.Console()
-        .WriteTo.Seq(seqUrl ?? "http://localhost:5341");
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -27,7 +23,11 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(MyGrpcServiceService).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(MyGrpcServiceService).Assembly);
+    cfg.LicenseKey = builder.Configuration["MediatR:LicenseKey"];
+});
 
 builder.Services.AddGrpc(options =>
 {
