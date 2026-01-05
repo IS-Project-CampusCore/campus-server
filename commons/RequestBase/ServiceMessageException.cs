@@ -1,7 +1,7 @@
 ﻿using commons.Protos;
 
 
-namespace commons;
+namespace commons.RequestBase;
 
 public class ServiceMessageException(string msg, ServiceMessageException.MessageResponseDelegate generator) : Exception(msg)
 {

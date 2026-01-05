@@ -1,42 +1,17 @@
-﻿using commons;
-using commons.Protos;
+﻿using commons.RequestBase;
 using excel.Implementation;
 using excel.Models;
 using excelServiceClient;
-using Grpc.Core;
-using MediatR;
 
 namespace excel.Services;
 
 public class UpdateExcelMessage(
     ILogger<UpdateExcelMessage> logger,
     ExcelServiceImplementation implementation
-) : IRequestHandler<UpdateExcelRequest, MessageResponse>
+) : CampusMessage<UpdateExcelRequest, ExcelDocument>(logger)
 {
     private readonly ExcelServiceImplementation _impl = implementation;
-    private readonly ILogger<UpdateExcelMessage> _logger = logger;
 
-    public async Task<MessageResponse> Handle(UpdateExcelRequest request, CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrEmpty(request.FileName) || request.Content is null || request.Content.IsEmpty)
-        {
-            _logger.LogError("Excel Request is empty");
-            return MessageResponse.BadRequest("Excel Request is empty");
-        }
-
-        try
-        {
-            ExcelDocument excelData = await _impl.UpdateAsync(request.FileName, request.Content.ToArray());
-
-            return MessageResponse.Ok(excelData);
-        }
-        catch (NotFoundException ex)
-        {
-            return MessageResponse.NotFound(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return MessageResponse.Error(ex);
-        }
-    }
+    protected override async Task<ExcelDocument> HandleMessage(UpdateExcelRequest request, CancellationToken cancellationToken) =>
+            await _impl.UpdateAsync(request.FileName, request.Content.ToArray());
 }

@@ -1,23 +1,18 @@
 using Serilog;
 using System.Net;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
-using users.Services;
-using commons;
 using users;
 using emailServiceClient;
 using excelServiceClient;
+using commons.RequestBase;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seqUrl = builder.Configuration["Logging:SeqUrl"];
 builder.Host.UseSerilog((context, config) =>
 {
     config
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .ReadFrom.Configuration(builder.Configuration)
-        .WriteTo.Console()
-        .WriteTo.Seq(seqUrl ?? "http://localhost:5341");
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -40,7 +35,11 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(UsersService).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(UsersService).Assembly);
+    cfg.LicenseKey = builder.Configuration["MediatR:LicenseKey"];
+});
 
 builder.Services.AddGrpc(options =>
 {

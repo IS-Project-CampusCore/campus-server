@@ -10,16 +10,11 @@ AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seqUrl = builder.Configuration["Logging:SeqUrl"];
-
 builder.Host.UseSerilog((context, config) =>
 {
     config
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .ReadFrom.Configuration(builder.Configuration)
-        .WriteTo.Console()
-        .WriteTo.Seq(seqUrl!);
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
 });
 
 builder.WebHost.ConfigureKestrel(options =>

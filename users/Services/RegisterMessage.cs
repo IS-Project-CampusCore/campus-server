@@ -1,5 +1,5 @@
-﻿using commons;
-using commons.Protos;
+﻿using commons.Protos;
+using commons.RequestBase;
 using Grpc.Core;
 using MediatR;
 using users.Model;
@@ -10,34 +10,16 @@ namespace users.Services;
 public class RegisterMessage(
     ILogger<LoginMessage> logger,
     IUsersServiceImplementation implementation
-) : IRequestHandler<RegisterRequest, MessageResponse>
+) : CampusMessage<RegisterRequest, User?>(logger)
 {
-    private readonly ILogger<LoginMessage> _logger = logger;
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    public async Task<MessageResponse> Handle(RegisterRequest request, CancellationToken token)
+    protected override async Task<User?> HandleMessage(RegisterRequest request, CancellationToken token)
     {
-        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.Name) || string.IsNullOrEmpty(request.Role))
-        {
-            _logger.LogError("Request filed can not be empty");
-            throw new BadRequestException("Request filed can not be empty");
-        }
+        var email = request.Email;
+        var name = request.Name;
+        var role = User.StringToRole(request.Role);
 
-        try
-        {
-            var email = request.Email;
-            var name = request.Name;
-            var role = User.StringToRole(request.Role);
-
-            return MessageResponse.Ok(await _implementation.RegisterUser(email, name, role));
-        }
-        catch (BadRequestException ex)
-        {
-            return MessageResponse.BadRequest(ex.Message);
-        }
-        catch (Exception ex)
-        {
-            return MessageResponse.Error(ex.Message);
-        }
+        return await _implementation.RegisterUser(email, name, role);
     }
 }
