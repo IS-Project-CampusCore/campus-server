@@ -108,8 +108,7 @@ public class ExcelServiceImplementation(
         var result = new ExcelData();
 
         var documents = await _documents;
-
-        var document = documents.GetOneAsync(ed => ed.FileName == fileName);
+        var document = await documents.GetOneAsync(ed => ed.FileName == fileName);
 
         if (document is null)
         {
@@ -143,8 +142,7 @@ public class ExcelServiceImplementation(
             List<string> headers = [];
             foreach (var cell in headerRow.Cells(1, lastHeaderCell))
             {
-                string headerText = cell.GetString().Trim();
-                headers.Add(headerText);
+                headers.Add(cell.GetString().Trim());
             }
 
             result.Headers = headers;
@@ -157,18 +155,22 @@ public class ExcelServiceImplementation(
 
             foreach (var row in ws.Rows(2, lastRow))
             {
-                List<string?> rowValues = new List<string?>();
+                List<string?> rowValues = [];
                 foreach (var cell in row.Cells(1, lastHeaderCell))
                 {
-                    if (cell.TryGetValue<string>(out string cellValue))
+                    if (!cell.TryGetValue<string>(out string cellValue))
                     {
-                        rowValues.Add(cellValue);
+                        result.Errors.Add($"[Excel Error] Invalid data type at cell ({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
+                        rowValues.Add(null);
+                    }
+                    else if (string.IsNullOrWhiteSpace(cellValue))
+                    {
+                        result.Errors.Add($"[Excel Error] Empty cell at ({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
+                        rowValues.Add(null);
                     }
                     else
                     {
-                        //for future implementation this should store those empty cells and tell the user about them
-                        _logger.LogWarning($"Data missing from the cell:({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
-                        rowValues.Add(null);
+                        rowValues.Add(cellValue);
                     }
                 }
                 result.Rows.Add(rowValues);
@@ -189,7 +191,6 @@ public class ExcelServiceImplementation(
 
         return result;
     }
-
     private static string ComputeHash(byte[] content)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();
