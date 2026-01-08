@@ -8,6 +8,8 @@ networks:
 services:
   mongo:
     image: mongo:latest
+    restart: always
+    command: ["mongod", "--quiet", "--logpath", "/dev/null"]
     ports:
       - "27017:27017"
     volumes:
@@ -20,6 +22,13 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: none
     networks:
       - campus-network
 
@@ -52,11 +61,16 @@ services:
 
   seq:
     image: datalust/seq:latest
+    restart: always
     ports:
       - "5342:80"
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    logging:
+      driver: none
+    tmpfs:
+      - /data
     networks:
       - campus-network
 
@@ -65,7 +79,7 @@ services:
       context: .
       dockerfile: ./users/Dockerfile
     ports:
-      - "8081:8080"
+      - "8086:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__EmailService=http://email:8080 
@@ -106,6 +120,7 @@ services:
       - MongoDB__DatabaseName=excel
     depends_on:
       - seq
+      - mongo
     volumes:
       - ./FileStorage:/app/FileStorage
     networks:
@@ -127,6 +142,7 @@ services:
     depends_on:
       - seq
       - users
+      - mongo
       - rabbitmq
     volumes:
       - ./FileStorage:/app/FileStorage
@@ -139,12 +155,20 @@ services:
       dockerfile: ./notification/Dockerfile
     ports:
       - "8085:8080"
+      - "8081:8081"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - GrpcServices__ChatService=http://chat:8080
+      - GrpcServices__UsersService=http://users:8080
+      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - RabbitMq__Host=rabbitmq
     depends_on:
-      - seq
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+      chat:
+        condition: service_started
     networks:
       - campus-network

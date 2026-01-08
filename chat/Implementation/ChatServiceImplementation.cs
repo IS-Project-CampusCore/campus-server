@@ -1,35 +1,35 @@
 ﻿using chat.Models;
-using commons;
 using commons.Database;
-using commons.Events;
+using commons.EventBase;
+using commons.RequestBase;
 using commons.Tools;
-using MassTransit;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Servers;
+using System.Threading;
 using usersServiceClient;
-using System.Linq;
+using static MongoDB.Bson.Serialization.Serializers.SerializerHelper;
 
 namespace Chat.Implementation;
 
 public interface IChatService
 {
-    public Task<string> CreateGroup(string name, string adminId);
-    public Task AddGroupMember(string groupId, string memeberId);
-    public Task RemoveGroupMember(string groupId, string memeberId);
-    public Task<Group> GetGroupById(string groupId);
-    public Task<IEnumerable<Group>> GetUserGroups(string memberId);
+    Task<Group> CreateGroupAsync(string name, string adminId);
+    Task AddGroupMemberAsync(string groupId, string memberId);
+    Task RemoveGroupMemberAsync(string groupId, string memberId);
+    Task<Group> GetGroupByIdAsync(string groupId);
+    Task<IEnumerable<Group>?> GetUserGroupsAsync(string memberId);
 
-    public Task<string> UploadFile(string name, string groupId, byte[] data);
-    public Task<FileStream> GetFileById(string fileId);
+    Task<ChatFile> UploadFileAsync(string name, string groupId, byte[] data);
+    Task<byte[]> GetFileByIdAsync(string fileId);
+    Task<IEnumerable<byte[]>?> GetFilesByMessageIdAsync(string messageId);
 
-    public Task<string> SendMessage(string senderId, string groupId, string? content, List<string>? filesId);
-    public Task<IEnumerable<ChatMessage>> GetMessages(string reciverId, string groupId, int skip, int limit);
+    Task<ChatMessage> SendMessageAsync(string senderId, string groupId, string? content, List<string> filesId);
+    Task<IEnumerable<ChatMessage>> GetMessagesAsync(string reciverId, string groupId, int skip, int limit);
 }
 
 public class ChatServiceImplementation(
     ILogger<ChatServiceImplementation> logger,
     IDatabase database,
-    IPublishEndpoint publishEndpoint,
+    IScopedMessagePublisher publisher,
     usersService.usersServiceClient usersService,
     IConfiguration config
 ) : IChatService
@@ -40,13 +40,13 @@ public class ChatServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<Group>> _groups = new(() => GetGroupsCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<ChatFile>> _files = new(() => GetFilesCollection(database));
 
-    private readonly IPublishEndpoint _publishEndpoint = publishEndpoint;
+    private readonly IScopedMessagePublisher _publisher = publisher;
 
     private readonly usersService.usersServiceClient _usersService = usersService;
 
     private string _basePath => config["StorageDir"] ?? "FileStorage/ChatFiles";
 
-    public async Task<string> CreateGroup(string name, string adminId)
+    public async Task<Group> CreateGroupAsync(string name, string adminId)
     {
         if (string.IsNullOrEmpty(name))
         {
@@ -77,26 +77,35 @@ public class ChatServiceImplementation(
 
         var groups = await _groups;
 
-        return await groups.InsertAsync(newGroup);
+        string groupId = await groups.InsertAsync(newGroup);
+
+        await _publisher.Publish("GroupCreated", new
+        {
+            GroupId = groupId,
+            GroupName = name,
+            AdminId = adminId
+        });
+
+        return newGroup;
     }
 
-    public async Task<Group> GetGroupById(string groupId)
+    public async Task<Group> GetGroupByIdAsync(string groupId)
     {
         var groups = await _groups;
 
         return await groups.GetOneByIdAsync(groupId);
     }
 
-    public async Task AddGroupMember(string groupId, string memeberId)
+    public async Task AddGroupMemberAsync(string groupId, string memberId)
     {
-        Group group = await GetGroupById(groupId);
+        Group group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
             _logger.LogInformation($"Group not found for Id:{groupId}");
             throw new BadRequestException("Group not found");
         }
 
-        var getMemberRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memeberId });
+        var getMemberRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memberId });
 
         if (!getMemberRes.Success)
         {
@@ -107,29 +116,43 @@ public class ChatServiceImplementation(
         var payload = getMemberRes.Payload;
         string memberName = payload.GetString("Name");
 
-        group.MembersId.Add(memeberId);
+        if (group.MembersId.Contains(memberId))
+        {
+            _logger.LogInformation($"Member:{memberName} is already added to this Group:{group.Name}");
+            throw new BadRequestException("User already added");
+        }
+
+        group.MembersId.Add(memberId);
 
         var groups = await _groups;
         await groups.ReplaceAsync(group);
 
         _logger.LogInformation($"New Memeber:{memberName} was added to Group:{group.Name}");
+
+        await _publisher.Publish("MemberAdded", new
+        {
+            GroupId = groupId,
+            MemberId = memberId,
+            MemberName = memberName
+        });
     }
 
-    public async Task RemoveGroupMember(string groupId, string memeberId)
+    public async Task RemoveGroupMemberAsync(string groupId, string memberId)
     {
-        Group group = await GetGroupById(groupId);
+        Group group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
             _logger.LogInformation($"Group not found for Id:{groupId}");
             throw new BadRequestException("Group not found");
         }
 
-        if (!group.MembersId.Contains(memeberId))
+        if (!group.MembersId.Contains(memberId))
         {
-            _logger.LogInformation($"No group memeber found with Id:{memeberId}");
+            _logger.LogInformation($"No group memeber found with Id:{memberId}");
+            throw new NotFoundException("User not found");
         }
 
-        var getMemberRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memeberId });
+        var getMemberRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memberId });
 
         if (!getMemberRes.Success)
         {
@@ -140,15 +163,22 @@ public class ChatServiceImplementation(
         var payload = getMemberRes.Payload;
         string memberName = payload.GetString("Name");
 
-        group.MembersId.Remove(memeberId);
+        group.MembersId.Remove(memberId);
 
         var groups = await _groups;
         await groups.ReplaceAsync(group);
 
         _logger.LogInformation($"Memeber:{memberName} was removed from Group:{group.Name}");
+
+        await _publisher.Publish("MemberRemoved", new
+        {
+            GroupId = groupId,
+            MemberId = memberId,
+            MemberName = memberName
+        });
     }
 
-    public async Task<IEnumerable<Group>> GetUserGroups(string memberId)
+    public async Task<IEnumerable<Group>?> GetUserGroupsAsync(string memberId)
     {
         var memberRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memberId });
         if (!memberRes.Success)
@@ -161,7 +191,7 @@ public class ChatServiceImplementation(
         string member = payload.GetString("Name");
 
         var groups = await _groups;
-        var memberGroups = await groups.MongoCollection.FindAsync(gr => gr.MembersId.Contains(member));
+        var memberGroups = await groups.MongoCollection.FindAsync(gr => gr.MembersId.Contains(memberId));
 
         var res = await memberGroups.ToListAsync();
 
@@ -169,18 +199,20 @@ public class ChatServiceImplementation(
         return res;
     }
 
-    public async Task<string> UploadFile(string name, string groupId, byte[] data)
+    public async Task<ChatFile> UploadFileAsync(string name, string groupId, byte[] data)
     {
-        Group group = await GetGroupById(groupId);
+        Group group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
             _logger.LogInformation($"Group not found for Id:{groupId}");
             throw new BadRequestException("Group not found");
         }
 
-        string fileName = name + Guid.NewGuid().ToString();
+        string extension = Path.GetExtension(name);
+        string nameWhitoutExtension = Path.GetFileNameWithoutExtension(name);
+        string fileName = $"{nameWhitoutExtension}_{Guid.NewGuid().ToString()}{extension}";
 
-        var filePath = Path.Combine(_basePath, group.Name, fileName);
+        var filePath = Path.Combine(_basePath, group.Id, fileName);
         var directory = Path.GetDirectoryName(filePath);
 
         if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
@@ -202,10 +234,12 @@ public class ChatServiceImplementation(
         var files = await _files;
 
         _logger.LogInformation($"Upload file with Name:{file.FileName}");
-        return await files.InsertAsync(file);
+        await files.InsertAsync(file);
+
+        return file;
     }
 
-    public async Task<FileStream> GetFileById(string fileId)
+    public async Task<byte[]> GetFileByIdAsync(string fileId)
     {
         var files = await _files;
 
@@ -218,7 +252,11 @@ public class ChatServiceImplementation(
 
         try
         {
-            return File.OpenRead(file.FilePath);
+            var fileStream = File.OpenRead(file.FilePath);
+            using MemoryStream ms = new();
+            await fileStream.CopyToAsync(ms);
+
+            return ms.ToArray();
         }
         catch (FileNotFoundException)
         {
@@ -238,7 +276,34 @@ public class ChatServiceImplementation(
         }
     }
 
-    public async Task<string> SendMessage(string senderId, string groupId, string? content, List<string>? filesId)
+    public async Task<IEnumerable<byte[]>?> GetFilesByMessageIdAsync(string messageId)
+    {
+        var messages = await _messages;
+
+        ChatMessage message = await messages.GetOneByIdAsync(messageId);
+        if (message is null)
+        {
+            _logger.LogInformation($"No message was found in database with Id:{messageId}");
+            throw new NotFoundException($"Message with Id:{messageId} not found");
+        }
+
+        if (message.FilesId is null || !message.FilesId.Any())
+        {
+            _logger.LogInformation($"Message:{messageId} contains no files. Null will be sent.");
+            return null;
+        }
+
+        List<byte[]> files = [];
+        foreach (var fileId in message.FilesId)
+        {
+            var file = await GetFileByIdAsync(fileId);
+            files.Add(file);
+        }
+
+        return files;
+    }
+
+    public async Task<ChatMessage> SendMessageAsync(string senderId, string groupId, string? content, List<string> filesId)
     {
         if (content is null && (filesId is null || filesId.Count <= 0))
         {
@@ -256,7 +321,7 @@ public class ChatServiceImplementation(
         var payload = senderRes.Payload;
         string senderName = payload.GetString("Name");
 
-        var group = await GetGroupById(groupId);
+        var group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
             _logger.LogInformation($"Group with Id:{groupId} was not found");
@@ -269,24 +334,18 @@ public class ChatServiceImplementation(
             GroupId = groupId,
             Content = content,
             FilesId = filesId,
-            SendAt = DateTime.UtcNow,
+            SentAt = DateTime.UtcNow,
         };
 
         var messages = await _messages;
         string id = await messages.InsertAsync(message);
 
-        await _publishEndpoint.Publish(new MessageCreatedEvent(
-            senderId,
-            groupId,
-            content,
-            filesId,
-            message.SendAt
-        ));
+        await _publisher.Publish("MessageCreated", message);
 
-        return id;
+        return message;
     }
 
-    public async Task<IEnumerable<ChatMessage>> GetMessages(string reciverId, string groupId,int skip, int limit)
+    public async Task<IEnumerable<ChatMessage>> GetMessagesAsync(string reciverId, string groupId,int skip, int limit)
     {
         if (skip < 0)
         {
@@ -310,7 +369,7 @@ public class ChatServiceImplementation(
         var payload = reciverRes.Payload;
         string reciverName = payload.GetString("Name");
 
-        var group = await GetGroupById(groupId);
+        var group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
             _logger.LogInformation($"Group with Id:{groupId} was not found");
@@ -326,7 +385,7 @@ public class ChatServiceImplementation(
         var messages = await _messages;
         var chats = messages.MongoCollection.Aggregate()
             .Match(cm => cm.GroupId == groupId)
-            .SortByDescending(cm => cm.SendAt)
+            .SortByDescending(cm => cm.SentAt)
             .Skip(skip)
             .Limit(limit);
 
@@ -339,7 +398,7 @@ public class ChatServiceImplementation(
 
         var senderIndex = Builders<ChatMessage>.IndexKeys.Ascending(cm => cm.SenderId);
         var groupIndex = Builders<ChatMessage>.IndexKeys.Ascending(cm => cm.GroupId);
-        var sendAtIndex = Builders<ChatMessage>.IndexKeys.Descending(cm => cm.SendAt);
+        var sendAtIndex = Builders<ChatMessage>.IndexKeys.Descending(cm => cm.SentAt);
 
         CreateIndexModel<ChatMessage> index1 = new(senderIndex, new CreateIndexOptions
         {
@@ -351,7 +410,7 @@ public class ChatServiceImplementation(
             Name = "messageGroupIndex"
         });
 
-        CreateIndexModel<ChatMessage> index3 = new(groupIndex, new CreateIndexOptions
+        CreateIndexModel<ChatMessage> index3 = new(sendAtIndex, new CreateIndexOptions
         {
             Name = "messageSendAtIndex"
         });

@@ -8,6 +8,8 @@ using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
 
+Console.Clear();
+
 builder.Host.UseSerilog((context, config) =>
 {
     config

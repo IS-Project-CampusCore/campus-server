@@ -4,19 +4,25 @@ using commons.Protos;
 using chatServiceClient;
 using MediatR;
 using Chat.Implementation;
+using commons.RequestBase;
+using chat.Models;
 
 namespace Chat.Services;
 
 public class SendMessage(
     ILogger<SendMessage> logger,
     ChatServiceImplementation implementation
-) : IRequestHandler<SendMessageRequest, MessageResponse>
+) : CampusMessage<SendMessageRequest, ChatMessage>(logger)
 {
     private readonly ChatServiceImplementation _impl = implementation;
-    private readonly ILogger<SendMessage> _logger = logger;
 
-    public Task<MessageResponse> Handle(SendMessageRequest request, CancellationToken token)
+    protected override async Task<ChatMessage> HandleMessage(SendMessageRequest request, CancellationToken token)
     {
-        if (request is null || request.) {
+        string sender = request.SenderId;
+        string reciver = request.GroupId;
+        string? content = request.Content;
+        List<string> files = [.. request.FilesId];
+
+        return await _impl.SendMessageAsync(sender, reciver, content, files);
     }
 }

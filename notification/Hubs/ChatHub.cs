@@ -1,42 +1,51 @@
 ﻿using chatServiceClient;
-using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.Authorization;
+using notification.Auth;
+using commons.SignalRBase;
 
 namespace notification.Hubs;
 
+[Authorize(Policy = ChatPolicy.AuthenticatedUser)]
 public class ChatHub(
-    chatService.chatServiceClient chatService,
-    ILogger<ChatHub> logger
-    ) : Hub
+    ILogger<ChatHub> logger,
+    IConnectionMapping<ChatHub> connectionMapping,
+    chatService.chatServiceClient chatService
+    ) : CampusHub<ChatHub>(logger, connectionMapping)
 {
     private readonly chatService.chatServiceClient _chatService = chatService;
-    private readonly ILogger<ChatHub> _logger = logger;
 
     public override async Task OnConnectedAsync()
     {
-        var userId = Context.User?.FindFirst("sub")?.Value;
-        if (userId is not null)
+        await base.OnConnectedAsync();
+
+        if (CurrentUser is not null)
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, userId);
-            _logger.LogInformation($"User:{userId} was connected to the private channel");
-
-            var response = await _chatService.GetUserGroupsAsync(new GetGroupsRequest { MemberId = userId });
-            if (response.Success)
+            var response = await _chatService.GetUserGroupsAsync(new GetGroupsRequest { MemberId = CurrentUser.Id });
+            if (!response.Success)
             {
-                var payload = response.Payload;
-                var groupIds = payload.Array().IterateStrings();
+                _logger.LogInformation($"An error ocurred when finding groups:{response.Errors}");
+                return;
+            }
 
-                foreach (var groupId in groupIds)
+            var payload = response.Payload;
+            var groups = payload.TryArray()?.Iterate().Select(e => new
+            {
+                Id = e.GetString("Id"),
+                Name = e.GetString("Name")
+            });
+
+            if (groups is not null)
+            {
+                foreach (var group in groups)
                 {
-                    await Groups.AddToGroupAsync(Context.ConnectionId, groupId);
-                    _logger.LogInformation($"User:{userId} was connected to the Group:{groupId}");
+                    await Groups.AddToGroupAsync(Context.ConnectionId, group.Id);
+                    _logger.LogInformation($"User:{CurrentUser.Name} was connected to the Group:{group.Name}");
                 }
             }
             else
             {
-                _logger.LogInformation($"An error ocurred when finding groups:{response.Errors}");
+                _logger.LogInformation($"User:{CurrentUser.Name} has no groups, single connection to private chanel");
             }
         }
-
-        await base.OnConnectedAsync();
     }
 }

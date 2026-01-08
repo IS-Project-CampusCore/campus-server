@@ -1,26 +1,29 @@
 using chatServiceClient;
-using commons;
+using commons.EventBase;
+using commons.RequestBase;
 using MassTransit;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
+using notification.Auth;
 using notification.Hubs;
 using notification.Implementation;
 using Notification;
 using Notification.Implementation;
-using Notification.Services;
 using Serilog;
 using System.Net;
+using System.Reflection;
+using usersServiceClient;
+using commons.SignalRBase;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seqUrl = builder.Configuration["Logging:SeqUrl"];
+Console.Clear();
+
 builder.Host.UseSerilog((context, config) =>
 {
     config
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .ReadFrom.Configuration(builder.Configuration)
-        .WriteTo.Console()
-        .WriteTo.Seq(seqUrl ?? "http://localhost:5341");
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -29,13 +32,43 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     {
         listenOptions.Protocols = HttpProtocols.Http2;
     });
+
+    serverOptions.Listen(IPAddress.Any, 8081, listenOptions =>
+    {
+        listenOptions.Protocols = HttpProtocols.Http1;
+    });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.SetIsOriginAllowed(origin => true)
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
 builder.Services.AddSignalR();
 
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = ChatAuthentication.SchemeName;
+    options.DefaultChallengeScheme = ChatAuthentication.SchemeName;
+}).AddScheme<AuthenticationSchemeOptions, ChatAuthentication>(
+    ChatAuthentication.SchemeName,
+    option => { }
+);
+
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(ChatPolicy.AuthenticatedUser, ChatPolicy.AuthenticatedUserPolicy);
+
 builder.Services.AddMassTransit(x =>
 {
-    x.AddConsumer<MessageCreatedConsumer>();
+    var myAssembly = Assembly.GetExecutingAssembly();
+
+    x.AddConsumers(myAssembly);
 
     x.UsingRabbitMq((context, cfg) =>
     {
@@ -43,11 +76,7 @@ builder.Services.AddMassTransit(x =>
             h.Username("guest");
             h.Password("guest");
         });
-
-        cfg.ReceiveEndpoint("gateway-chat-queue", e =>
-        {
-            e.ConfigureConsumer<MessageCreatedConsumer>(context);
-        });
+        cfg.RegisterConsumers(context, myAssembly);
     });
 });
 
@@ -64,14 +93,26 @@ builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:UsersService"];
+    o.Address = new Uri(address!);
+});
+
 builder.Services.AddScoped<ServiceInterceptor>();
 
 builder.Services.AddSingleton<NotificationServiceImplementation>();
+builder.Services.AddSingleton<IConnectionMapping<ChatHub>, ConnectionMapping<ChatHub>>();
+builder.Services.AddScoped<INotifier<ChatHub>, HubNotifier<ChatHub>>();
 
 var app = builder.Build();
 
-app.MapGrpcService<NotificationService>();
+app.UseCors();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapGrpcService<NotificationService>();
 app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

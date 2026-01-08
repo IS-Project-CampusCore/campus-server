@@ -1,7 +1,9 @@
 using Chat;
 using Chat.Implementation;
-using Chat.Services;
-using commons;
+using System.Reflection;
+using commons.Database;
+using commons.EventBase;
+using commons.RequestBase;
 using MassTransit;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
@@ -10,15 +12,13 @@ using usersServiceClient;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var seqUrl = builder.Configuration["Logging:SeqUrl"];
+Console.Clear();
+
 builder.Host.UseSerilog((context, config) =>
 {
     config
-        .MinimumLevel.Information()
-        .Enrich.FromLogContext()
-        .ReadFrom.Configuration(builder.Configuration)
-        .WriteTo.Console()
-        .WriteTo.Seq(seqUrl ?? "http://localhost:5341");
+        .ReadFrom.Configuration(context.Configuration)
+        .Enrich.FromLogContext();
 });
 
 builder.WebHost.ConfigureKestrel(serverOptions =>
@@ -31,16 +31,28 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
 
 builder.Services.AddMassTransit(x =>
 {
+    var myAssembly = Assembly.GetExecutingAssembly();
+
+    x.AddConsumers(myAssembly);
+
     x.UsingRabbitMq((context, cfg) =>
     {
         cfg.Host("rabbitmq", "/", h => {
             h.Username("guest");
             h.Password("guest");
         });
+        cfg.RegisterConsumers(context, myAssembly);
     });
 });
 
+builder.Services.AddSingleton<IScopedMessagePublisher, ScopedMessagePublisher>();
+
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ChatService).Assembly));
+
+string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
+string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
+
+builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
 
 builder.Services.AddGrpc(options =>
 {

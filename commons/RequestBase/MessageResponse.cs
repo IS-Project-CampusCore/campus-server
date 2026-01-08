@@ -107,9 +107,6 @@ public partial class MessageResponse
         if (body is null) 
             return string.Empty;
 
-        if (body is string s) 
-            return s;
-
         if (body is MessageBody mb) 
             return mb.Json.ToString();
 

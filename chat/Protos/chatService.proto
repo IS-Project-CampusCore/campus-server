@@ -15,6 +15,7 @@ service chatService
 
     rpc UploadFile (UploadFileRequest) returns (commons.protos.MessageResponse);
     rpc GetFile (GetFileRequest) returns (commons.protos.MessageResponse);
+    rpc GetMessageFiles (GetMessageFilesRequest) returns (commons.protos.MessageResponse);
 
     rpc SendMessage (SendMessageRequest) returns (commons.protos.MessageResponse);
     rpc GetHistory (GetHistoryRequest) returns (commons.protos.MessageResponse);
@@ -53,6 +54,11 @@ message UploadFileRequest
 message GetFileRequest
 {
     string fileId = 1;
+}
+
+message GetMessageFilesRequest
+{
+    string messageId = 1;
 }
 
 message SendMessageRequest

@@ -34,6 +34,10 @@ public class ChatService(IMediator mediator) : chatService.chatServiceBase
     {
         return await _mediator.Send(request, context.CancellationToken);
     }
+    public override async Task<MessageResponse> GetMessageFiles(GetMessageFilesRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request, context.CancellationToken);
+    }
 
     public override async Task<MessageResponse> SendMessage(SendMessageRequest request, ServerCallContext context)
     {

@@ -18,7 +18,7 @@ namespace users;
 
 public interface IUsersServiceImplementation 
 { 
-    public Task<User?> GetUserById(string id);
+    public Task<User> GetUserById(string id);
 
     public Task<User?> RegisterUser(string email, string name, UserType role);
 
@@ -46,9 +46,15 @@ public class UsersServiceImplementation(
     private List<User> _users = [];
     private readonly Dictionary<string, string> _verificationCodes = [];
 
-    public Task<User?> GetUserById(string id)
+    public Task<User> GetUserById(string id)
     {
-        return Task.FromResult(_users.FirstOrDefault(u => u.Id == id));
+        var user = _users.FirstOrDefault(u => u.Id == id);
+        if (user is null)
+        {
+            _logger.LogError($"User:{id} not found");
+            throw new NotFoundException("User not found");
+        }
+        return Task.FromResult(user);
     }
 
     public UserWithJwt AuthUser(string email, string password)
@@ -68,7 +74,7 @@ public class UsersServiceImplementation(
         }
 
         _logger.LogInformation($"User:{user} has been authenticated"); ;
-        return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Role));
+        return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Role, user.Name));
     }
 
     public async Task<User?> RegisterUser(string email, string name, UserType role)
@@ -162,7 +168,7 @@ public class UsersServiceImplementation(
 
             UpdateUser(verifiedUser);
 
-            return new UserWithJwt(verifiedUser, GenerateJwtToken(verifiedUser.Id, email, user.Role));
+            return new UserWithJwt(verifiedUser, GenerateJwtToken(verifiedUser.Id, email, user.Role, user.Name));
         }
         catch (BadRequestException ex)
         {
@@ -272,7 +278,7 @@ public class UsersServiceImplementation(
 
     private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
 
-    private string GenerateJwtToken(string userId, string userEmail, UserType role)
+    private string GenerateJwtToken(string userId, string userEmail, UserType role, string userName)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_config["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex");
@@ -281,6 +287,7 @@ public class UsersServiceImplementation(
         {
             new Claim(UserJwtExtensions.IdClaim, userId),
             new Claim(UserJwtExtensions.EmailClaim, userEmail),
+            new Claim(UserJwtExtensions.NameClaim, userName),
             new Claim(UserJwtExtensions.RoleClaim, role.ToString().ToLowerInvariant()),
             new Claim(UserJwtExtensions.IsVerifiedClaim, "true")
         };
