@@ -1,5 +1,6 @@
 ﻿using users.Model;
 using usersServiceClient;
+//using excel.Models;
 
 namespace users.Utils;
 
@@ -29,9 +30,9 @@ public static class ExcelToRegisterRequest
             if (row.Count <= nameIndex || row.Count <= emailIndex || row.Count <= roleIndex)
                 continue;
 
-            string nameValue = row[nameIndex] ?? "Unknown";
-            string emailValue = row[emailIndex] ?? "no-email";
-            string roleString = row[roleIndex] ?? "Guest";
+            string nameValue = row[nameIndex]?.Value?.ToString() ?? "Unknown";
+            string emailValue = row[emailIndex]?.Value?.ToString() ?? "no-email";
+            string roleString = row[roleIndex]?.Value?.ToString() ?? "Guest";
 
             var newReq = new RegisterRequest
             {

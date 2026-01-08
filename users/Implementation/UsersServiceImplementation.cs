@@ -12,6 +12,7 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using users.Model;
 using users.Utils;
 using usersServiceClient;
@@ -74,6 +75,17 @@ public class UsersServiceImplementation(
 
     public async Task<User?> RegisterUser(string email, string name, UserType role)
     {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new BadRequestException("Email cannot be empty.");
+        }
+
+        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        if (!Regex.IsMatch(email, emailPattern))
+        {
+            throw new BadRequestException("Please enter a valid email address.");
+        }
+
         var db = await _usersCollection;
 
         if (await db.ExistsAsync(u => u.Email == email))
@@ -121,6 +133,12 @@ public class UsersServiceImplementation(
 
     public async Task<UserWithJwt> Verify(string email, string password, string verifyCode)
     {
+        string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
+        if (string.IsNullOrWhiteSpace(password) || !Regex.IsMatch(password, passwordPattern))
+        {
+            throw new BadRequestException("Password does not meet security requirements.");
+        }
+
         User? user = await FindByEmailOrDefault(email);
         if (user is null)
         {
@@ -169,7 +187,16 @@ public class UsersServiceImplementation(
     {
         if (fileName is null) throw new BadRequestException("No file selected");
 
-        var response = await _excelService.ParseExcelAsync(new ParseExcelRequest { FileName = fileName });
+        var request = new ParseExcelRequest
+        {
+            FileName = fileName
+        };
+
+        request.CellTypes.Add("String");
+        request.CellTypes.Add("String");
+        request.CellTypes.Add("String");
+
+        var response = await _excelService.ParseExcelAsync(request);
 
         if (!response.Success) throw new InternalErrorException(response.Errors);
         if (string.IsNullOrEmpty(response.Body)) throw new BadRequestException("Empty excel file");
@@ -200,7 +227,6 @@ public class UsersServiceImplementation(
         }
         return users;
     }
-
     private async Task<User?> FindByEmailOrDefault(string email)
     {
         var db = await _usersCollection;

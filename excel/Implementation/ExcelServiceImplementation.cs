@@ -103,7 +103,7 @@ public class ExcelServiceImplementation(
         return updatedDoc;
     }
 
-    public async Task<ExcelData> ParseExcelFile(string fileName)
+    public async Task<ExcelData> ParseExcelFile(string fileName,List<string> types)
     {
         var result = new ExcelData();
 
@@ -155,23 +155,66 @@ public class ExcelServiceImplementation(
 
             foreach (var row in ws.Rows(2, lastRow))
             {
-                List<string?> rowValues = [];
+                List<ExcelCell?> rowValues = [];
+
                 foreach (var cell in row.Cells(1, lastHeaderCell))
                 {
-                    if (!cell.TryGetValue<string>(out string cellValue))
-                    {
-                        result.Errors.Add($"[Excel Error] Invalid data type at cell ({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
-                        rowValues.Add(null);
+                    ExcelCell? excelCell=null;
+                   if(cell.Value.IsBlank)
+                   {
+                        result.Errors.Add($"[Excell Error] Empty cell at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                   }
+                   else if (cell.Value.IsNumber)
+                   {
+                        if (cell.TryGetValue<double>(out var value))
+                        {
+                            excelCell = new ExcelCell("Double", value);
+                        }
+                   }
+                   else  if (cell.Value.IsBoolean)
+                   {
+                        if (cell.TryGetValue<bool>(out var value))
+                        {
+                            excelCell = new ExcelCell("Bool", value);
+                        }
                     }
-                    else if (string.IsNullOrWhiteSpace(cellValue))
+                   else if (cell.Value.IsDateTime)
+                   {
+                        if (cell.TryGetValue<DateTime>(out var value))
+                        {
+                            excelCell = new ExcelCell("DateTime", value);
+                        }
+                    }
+                   else if (cell.Value.IsText)
+                   {
+                        if (cell.TryGetValue<string>(out var value))
+                        {
+                            excelCell = new ExcelCell("String", value);
+                        }
+                    }
+                   else if (cell.Value.IsError)
+                   {
+                        if (cell.TryGetValue<XLError>(out var value))
+                        {
+                            excelCell = new ExcelCell("Error", value);
+                        }
+                    }
+                    if (excelCell is not null)
                     {
-                        result.Errors.Add($"[Excel Error] Empty cell at ({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
-                        rowValues.Add(null);
+                        if(excelCell.CellType != types[cell.Address.ColumnNumber -1])
+                        {
+                            result.Errors.Add($"[Excell Error] Type mismatch at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}. Expected:{types[cell.Address.ColumnNumber -1]}, Found:{excelCell.CellType}");
+                        }
+                        rowValues.Add(excelCell);
+
                     }
                     else
                     {
-                        rowValues.Add(cellValue);
+                        result.Errors.Add($"[Excell Error] Unsupported cell type at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        rowValues.Add(new ExcelCell("Blank",null));
                     }
+                     
+                    
                 }
                 result.Rows.Add(rowValues);
             }
