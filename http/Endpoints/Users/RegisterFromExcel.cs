@@ -31,6 +31,7 @@ public class RegisterFromExcel(ILogger<RegisterFromExcel> logger) : CampusEndpoi
         var grpcRequest = new UsersExcelRequest
         {
             FileName = req.FileName
+           
         };
 
         MessageResponse grpcResponse = await Client.RegisterUsersFromExcelAsync(grpcRequest, null, null, cancellationToken);

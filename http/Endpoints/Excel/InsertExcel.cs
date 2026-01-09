@@ -7,7 +7,7 @@ using http.Auth;
 namespace http.Endpoints.Excel;
 
 
-public record ExcelParseRequest(string FileName);
+//public record ExcelParseRequest(string FileName);
 public record ExcelUplaodRequest(IFormFile File);
 
 public class InsertExcel(ILogger<InsertExcel> logger) : CampusEndpoint<ExcelUplaodRequest>(logger)

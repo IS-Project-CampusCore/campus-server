@@ -2,6 +2,7 @@
 using commons.RequestBase;
 using Grpc.Core;
 using MediatR;
+using users.Implementation;
 using users.Model;
 using usersServiceClient;
 
