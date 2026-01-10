@@ -26,9 +26,12 @@ public interface IUsersServiceImplementation
     public Task<UserWithJwt> AuthUser(string email, string password);
     public Task<UserWithJwt> Verify(string email, string password, string verifyCode);
     public Task<List<User?>> RegisterUsersFromExcel(string fileName);
+<<<<<<< HEAD
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
+=======
+>>>>>>> origin/main
 }
 
 public class UsersServiceImplementation(
@@ -133,6 +136,7 @@ public class UsersServiceImplementation(
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
     }
+<<<<<<< HEAD
     public async Task DeleteAccount(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId))
@@ -153,6 +157,9 @@ public class UsersServiceImplementation(
 
         _logger.LogInformation($"User with ID:{userId} has been deleted.");
     }
+=======
+
+>>>>>>> origin/main
     public async Task<UserWithJwt> Verify(string email, string password, string verifyCode)
     {
         string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
@@ -204,6 +211,7 @@ public class UsersServiceImplementation(
             throw new InternalErrorException(ex.Message);
         }
     }
+<<<<<<< HEAD
     public async Task ResendVerifyCode(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -268,6 +276,9 @@ public class UsersServiceImplementation(
             throw new InternalErrorException(response.Errors);
         }
     }
+=======
+
+>>>>>>> origin/main
     public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
     {
         if (fileName is null) throw new BadRequestException("No file selected");
@@ -317,6 +328,7 @@ public class UsersServiceImplementation(
         var db = await _usersCollection;
         return await db.GetOneAsync(x => x.Email == email);
     }
+<<<<<<< HEAD
     public async Task ResetPassword(string email)
     {
         var db = await _usersCollection;
@@ -350,6 +362,9 @@ public class UsersServiceImplementation(
             throw new InternalErrorException("Could not send reset email.");
         }
     }
+=======
+
+>>>>>>> origin/main
     private async Task<User> UpdateUser(User userToUpdate)
     {
         var db = await _usersCollection;
