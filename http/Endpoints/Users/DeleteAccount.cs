@@ -20,12 +20,7 @@ public class DeleteAccount(ILogger<DeleteAccount> logger) : CampusEndpoint<Empty
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)
     {
         string? userId = GetUserId();
-        /*User.FindFirst(ClaimTypes.NameIdentifier)?.Value  //don't use until getuserid is resolved
-                        ?? User.FindFirst("id")?.Value;*/
-        /*string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
-              ?? User.FindFirst("sub")?.Value                      
-              ?? User.FindFirst("id")?.Value                       
-              ?? User.FindFirst("userId")?.Value;*/
+        
 
         if (string.IsNullOrEmpty(userId))
         {
