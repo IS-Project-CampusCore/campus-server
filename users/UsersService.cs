@@ -30,7 +30,10 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
     {
         return await _mediator.Send(request);
     }
-
+    public override async Task<MessageResponse> ResendVerifyCode(ResendVerifyCodeRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
     public override async Task<MessageResponse> RegisterUsersFromExcel(UsersExcelRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request);

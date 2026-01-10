@@ -26,6 +26,7 @@ public interface IUsersServiceImplementation
     public Task<UserWithJwt> AuthUser(string email, string password);
     public Task<UserWithJwt> Verify(string email, string password, string verifyCode);
     public Task<List<User?>> RegisterUsersFromExcel(string fileName);
+    public Task ResendVerifyCode(string email);
 }
 
 public class UsersServiceImplementation(
@@ -182,7 +183,70 @@ public class UsersServiceImplementation(
             throw new InternalErrorException(ex.Message);
         }
     }
+    public async Task ResendVerifyCode(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            throw new BadRequestException("Email cannot be empty.");
+        }
 
+        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        if (!Regex.IsMatch(email, emailPattern))
+        {
+            throw new BadRequestException("Please enter a valid email address.");
+        }
+
+        User? user = await FindByEmailOrDefault(email);
+
+        if (user is null)
+        {
+            _logger.LogError($"ResendCode failed: User with Email:{email} not found.");
+            throw new BadRequestException("User not found.");
+        }
+
+        if (user.IsVerified)
+        {
+            _logger.LogWarning($"ResendCode skipped: User:{email} is already verified.");
+            throw new BadRequestException("User is already verified.");
+        }
+
+        string codeToSend;
+        bool hasCode = await HasVerifyCode(user.Id);
+
+        if (hasCode)
+        {
+            string? existingCode = await GetVerificationCode(user.Id);
+            if (string.IsNullOrEmpty(existingCode))
+            {
+                throw new InternalErrorException("System indicates code exists but none found.");
+            }
+            codeToSend = existingCode;
+            _logger.LogInformation($"Resending existing code for User:{email}");
+        }
+        else
+        {
+            int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
+            codeToSend = verifyCodeNumber.ToString("D4");
+            await StoreVerifyCode(user.Id, codeToSend);
+            _logger.LogInformation($"Generated new code for User:{email} as none existed.");
+        }
+
+        string templateDataString = JsonSerializer.Serialize(new { Name = user.Name, Code = codeToSend });
+
+        var response = await _emailService.SendEmailAsync(new SendEmailRequest
+        {
+            ToEmail = user.Email,
+            ToName = user.Name,
+            TemplateName = "Welcome",
+            TemplateData = templateDataString
+        });
+
+        if (!response.Success)
+        {
+            _logger.LogError($"Resend email failed with Code:{response.Code} and Error:{response.Errors}");
+            throw new InternalErrorException(response.Errors);
+        }
+    }
     public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
     {
         if (fileName is null) throw new BadRequestException("No file selected");
