@@ -38,4 +38,12 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
     {
         return await _mediator.Send(request);
     }
+    public override async Task<MessageResponse> DeleteAccount(DeleteAccountRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+    public override async Task<MessageResponse> ResetPassword(ResetPasswordRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
 }
