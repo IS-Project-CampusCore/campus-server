@@ -8,13 +8,12 @@ namespace users.Services;
 public class ResetPasswordMessage(
     ILogger<ResetPasswordMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<ResetPasswordRequest, MessageResponse>(logger)
+) : CampusMessage<ResetPasswordRequest>(logger)
 {
     private readonly IUsersServiceImplementation _impl = implementation;
 
-    protected override async Task<MessageResponse> HandleMessage(ResetPasswordRequest request, CancellationToken token)
+    protected override async Task HandleMessage(ResetPasswordRequest request, CancellationToken token)
     {
         await _impl.ResetPassword(request.Email);
-        return MessageResponse.Ok("Reset password code sent to email.");
     }
 }

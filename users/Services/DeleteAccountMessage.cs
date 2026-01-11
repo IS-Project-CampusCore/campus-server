@@ -8,13 +8,12 @@ namespace users.Services;
 public class DeleteAccountMessage(
     ILogger<DeleteAccountMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<DeleteAccountRequest, MessageResponse>(logger)
+) : CampusMessage<DeleteAccountRequest>(logger)
 {
     private readonly IUsersServiceImplementation _impl = implementation;
 
-    protected override async Task<MessageResponse> HandleMessage(DeleteAccountRequest request, CancellationToken token)
+    protected override async Task HandleMessage(DeleteAccountRequest request, CancellationToken token)
     {
         await _impl.DeleteAccount(request.UserId);
-        return MessageResponse.Ok("Account deleted successfully.");
     }
 }
