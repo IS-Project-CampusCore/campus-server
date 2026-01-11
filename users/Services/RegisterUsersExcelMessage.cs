@@ -1,6 +1,7 @@
 ﻿using commons.Protos;
 using commons.RequestBase;
 using MediatR;
+using users.Implementation;
 using users.Model;
 using usersServiceClient;
 

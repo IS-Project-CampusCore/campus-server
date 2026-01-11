@@ -2,6 +2,7 @@
 using commons.RequestBase;
 using usersServiceClient;
 using users.Model;
+using users.Implementation;
 
 namespace users.Services;
 
@@ -12,6 +13,6 @@ public class GetUserByIdMessage(
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    protected override Task<User> HandleMessage(UserIdRequest request, CancellationToken token) =>
-        _implementation.GetUserById(request.Id);
+    protected override async Task<User?> HandleMessage(UserIdRequest request, CancellationToken token) =>
+        await _implementation.GetUserById(request.Id);
 }

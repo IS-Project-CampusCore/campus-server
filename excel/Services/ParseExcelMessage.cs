@@ -8,10 +8,10 @@ namespace excel.Services;
 public class ParseExcelMessage(
     ILogger<ParseExcelMessage> logger,
     ExcelServiceImplementation implementation
-) : CampusMessage <ParseExcelRequest, ExcelData>(logger)
+) : CampusMessage<ParseExcelRequest, ExcelData>(logger)
 {
     private readonly ExcelServiceImplementation _impl = implementation;
 
-    protected override async Task<ExcelData> HandleMessage(ParseExcelRequest request, CancellationToken token) 
-        => await _impl.ParseExcelFile(request.FileName);
+    protected override async Task<ExcelData> HandleMessage(ParseExcelRequest request, CancellationToken token)
+        => await _impl.ParseExcelFile(request.FileName, request.CellTypes.ToList());
 }

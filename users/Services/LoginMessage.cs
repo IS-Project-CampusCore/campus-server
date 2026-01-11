@@ -1,5 +1,6 @@
 ﻿using commons.Protos;
 using commons.RequestBase;
+using users.Implementation;
 using users.Model;
 using usersServiceClient;
 
@@ -12,6 +13,6 @@ public class LoginMessage(
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    protected override Task<UserWithJwt> HandleMessage(LoginRequest request, CancellationToken token) =>
-        Task.FromResult(_implementation.AuthUser(request.Email, request.Password));
+    protected override async Task<UserWithJwt> HandleMessage(LoginRequest request, CancellationToken token) =>
+        await _implementation.AuthUser(request.Email, request.Password);
 }

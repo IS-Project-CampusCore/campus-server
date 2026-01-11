@@ -103,13 +103,12 @@ public class ExcelServiceImplementation(
         return updatedDoc;
     }
 
-    public async Task<ExcelData> ParseExcelFile(string fileName)
+    public async Task<ExcelData> ParseExcelFile(string fileName,List<string> types)
     {
         var result = new ExcelData();
 
         var documents = await _documents;
-
-        var document = documents.GetOneAsync(ed => ed.FileName == fileName);
+        var document = await documents.GetOneAsync(ed => ed.FileName == fileName);
 
         if (document is null)
         {
@@ -143,8 +142,7 @@ public class ExcelServiceImplementation(
             List<string> headers = [];
             foreach (var cell in headerRow.Cells(1, lastHeaderCell))
             {
-                string headerText = cell.GetString().Trim();
-                headers.Add(headerText);
+                headers.Add(cell.GetString().Trim());
             }
 
             result.Headers = headers;
@@ -157,19 +155,66 @@ public class ExcelServiceImplementation(
 
             foreach (var row in ws.Rows(2, lastRow))
             {
-                List<string?> rowValues = new List<string?>();
+                List<ExcelCell?> rowValues = [];
+
                 foreach (var cell in row.Cells(1, lastHeaderCell))
                 {
-                    if (cell.TryGetValue<string>(out string cellValue))
+                    ExcelCell? excelCell=null;
+                   if(cell.Value.IsBlank)
+                   {
+                        result.Errors.Add($"[Excell Error] Empty cell at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                   }
+                   else if (cell.Value.IsNumber)
+                   {
+                        if (cell.TryGetValue<double>(out var value))
+                        {
+                            excelCell = new ExcelCell("Double", value);
+                        }
+                   }
+                   else  if (cell.Value.IsBoolean)
+                   {
+                        if (cell.TryGetValue<bool>(out var value))
+                        {
+                            excelCell = new ExcelCell("Bool", value);
+                        }
+                    }
+                   else if (cell.Value.IsDateTime)
+                   {
+                        if (cell.TryGetValue<DateTime>(out var value))
+                        {
+                            excelCell = new ExcelCell("DateTime", value);
+                        }
+                    }
+                   else if (cell.Value.IsText)
+                   {
+                        if (cell.TryGetValue<string>(out var value))
+                        {
+                            excelCell = new ExcelCell("String", value);
+                        }
+                    }
+                   else if (cell.Value.IsError)
+                   {
+                        if (cell.TryGetValue<XLError>(out var value))
+                        {
+                            excelCell = new ExcelCell("Error", value);
+                        }
+                    }
+                    if (excelCell is not null)
                     {
-                        rowValues.Add(cellValue);
+                        if(excelCell.CellType != types[cell.Address.ColumnNumber -1])
+                        {
+                            result.Errors.Add($"[Excell Error] Type mismatch at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}. Expected:{types[cell.Address.ColumnNumber -1]}, Found:{excelCell.CellType}");
+                        }
+                        rowValues.Add(excelCell);
+
                     }
                     else
                     {
-                        //for future implementation this should store those empty cells and tell the user about them
-                        _logger.LogWarning($"Data missing from the cell:({cell.Address.RowNumber}, {cell.Address.ColumnNumber})");
-                        rowValues.Add(null);
+                        result.Errors.Add($"[Excell Error] Unsupported cell type at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        rowValues.Add(new ExcelCell("Blank",null));
                     }
+                     
+                    
                 }
                 result.Rows.Add(rowValues);
             }
@@ -189,7 +234,6 @@ public class ExcelServiceImplementation(
 
         return result;
     }
-
     private static string ComputeHash(byte[] content)
     {
         using var sha = System.Security.Cryptography.SHA256.Create();

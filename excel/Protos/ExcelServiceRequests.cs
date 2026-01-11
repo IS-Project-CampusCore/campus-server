@@ -1,6 +1,7 @@
 ﻿using commons.Protos;
 using commons.RequestBase;
 using MediatR;
+using Serilog.Sinks.File;
 
 namespace excelServiceClient;
 
@@ -42,5 +43,14 @@ public partial class UpsertExcelRequest : IRequestBase
 
 public partial class ParseExcelRequest : IRequestBase
 {
-    public string? Validate() => string.IsNullOrEmpty(FileName) ? "Parse Excel Request requiers a file name" : null;
+    public string? Validate()
+    {
+        if(string.IsNullOrEmpty(FileName) || (CellTypes is null || CellTypes.Count == 0))
+        {
+            return  "Parse Excel Request requiers a file name";
+        }
+        return null;
+    } 
+    
+
 }

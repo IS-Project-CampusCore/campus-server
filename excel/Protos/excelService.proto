@@ -18,6 +18,7 @@ service excelService
 message ParseExcelRequest
 {
     string fileName = 1;
+    repeated string cellTypes = 2;
 }
 
 message InsertExcelRequest
