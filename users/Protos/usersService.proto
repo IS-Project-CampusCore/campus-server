@@ -15,6 +15,9 @@ service usersService
     rpc Register (RegisterRequest) returns (commons.protos.MessageResponse);
     
     rpc RegisterUsersFromExcel (UsersExcelRequest) returns (commons.protos.MessageResponse);
+    rpc ResendVerifyCode (ResendVerifyCodeRequest) returns (commons.protos.MessageResponse);
+    rpc DeleteAccount (DeleteAccountRequest) returns (commons.protos.MessageResponse);
+    rpc ResetPassword (ResetPasswordRequest) returns (commons.protos.MessageResponse);
 }
 
 message UserIdRequest
@@ -27,6 +30,10 @@ message VerifyRequest
   string email = 1;
   string password = 2;
   string code = 3;
+}
+message ResendVerifyCodeRequest
+{
+    string email = 1;
 }
 
 message RegisterRequest
@@ -45,4 +52,14 @@ message LoginRequest
 message UsersExcelRequest
 {
     string fileName = 1;
+}
+   
+message DeleteAccountRequest 
+{
+  string userId = 1;
+}
+
+message ResetPasswordRequest 
+{
+  string email = 1;
 }
