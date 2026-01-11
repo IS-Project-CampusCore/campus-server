@@ -22,7 +22,8 @@ public class MemberAddedConsumer(
     public static object Content => new
     {
         GroupId = "Group's Id",
-        MemberId = "Member's Id"
+        MemberId = "Member's Id",
+        MemberName = "Member's Name"
     };
 
     protected override async Task HandleMessage(commons.Protos.MessageBody body)
@@ -40,6 +41,7 @@ public class MemberAddedConsumer(
             {
                 GroupId = groupId,
                 MemberId = memberId,
+                MemberName = memberName
             });
 
         _logger.LogInformation($"User:{memberName} ({memberId}) added to Group:{groupId}");

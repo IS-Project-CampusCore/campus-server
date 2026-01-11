@@ -7,10 +7,10 @@ namespace chat.Services;
 
 public class GetFileMessage(
     ILogger<GetFileMessage> logger,
-    ChatServiceImplementation implementation
+    IChatService implementation
 ) : CampusMessage<GetFileRequest, byte[]>(logger)
 {
-    private readonly ChatServiceImplementation _impl = implementation;
+    private readonly IChatService _impl = implementation;
 
     protected override async Task<byte[]> HandleMessage(GetFileRequest request, CancellationToken cancellationToken)
         => await _impl.GetFileByIdAsync(request.FileId);

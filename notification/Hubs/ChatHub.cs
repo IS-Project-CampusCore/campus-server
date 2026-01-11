@@ -20,7 +20,7 @@ public class ChatHub(
 
         if (CurrentUser is not null)
         {
-            var response = await _chatService.GetUserGroupsAsync(new GetGroupsRequest { MemberId = CurrentUser.Id });
+            var response = await _chatService.GetUserGroupsAsync(new GetUserGroupsRequest { MemberId = CurrentUser.Id });
             if (!response.Success)
             {
                 _logger.LogInformation($"An error ocurred when finding groups:{response.Errors}");

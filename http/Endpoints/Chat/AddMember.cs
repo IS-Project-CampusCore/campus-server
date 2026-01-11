@@ -1,5 +1,6 @@
 ﻿using chatServiceClient;
 using commons.Protos;
+using FastEndpoints;
 using http.Auth;
 
 namespace http.Endpoints.Chat;
@@ -14,6 +15,8 @@ public class AddMember(ILogger<AddMember> logger) : CampusEndpoint<MemberRequest
     {
         Post("api/chat/add");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(MemberRequest req, CancellationToken cancellationToken)

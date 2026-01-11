@@ -7,10 +7,10 @@ namespace chat.Services;
 
 public class UploadFileMessage(
     ILogger<UploadFileMessage> logger,
-    ChatServiceImplementation implementation
+    IChatService implementation
 ) : CampusMessage<UploadFileRequest, ChatFile>(logger)
 {
-    private readonly ChatServiceImplementation _impl = implementation;
+    private readonly IChatService _impl = implementation;
 
     protected override async Task<ChatFile> HandleMessage(UploadFileRequest request, CancellationToken cancellationToken)
         => await _impl.UploadFileAsync(request.Name, request.GroupId, [.. request.Data]);

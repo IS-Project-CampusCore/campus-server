@@ -12,6 +12,8 @@ public class GetFile(ILogger<GetFile> logger) : CampusEndpoint<string>(logger)
     {
         Get("api/chat/file");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(string req, CancellationToken cancellationToken)

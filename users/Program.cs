@@ -27,6 +27,11 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
+string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
+
+builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
+
 builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:EmailService"];

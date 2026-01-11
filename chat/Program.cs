@@ -37,11 +37,12 @@ builder.Services.AddMassTransit(x =>
 
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("rabbitmq", "/", h => {
+        cfg.Host("rabbitmq", "/", h =>
+        {
             h.Username("guest");
             h.Password("guest");
         });
-        cfg.RegisterConsumers(context, myAssembly);
+        cfg.RegisterConsumers(context, myAssembly, "chat");
     });
 });
 
@@ -67,7 +68,7 @@ builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
 
 builder.Services.AddScoped<ServiceInterceptor>();
 
-builder.Services.AddSingleton<ChatServiceImplementation>();
+builder.Services.AddSingleton<IChatService, ChatServiceImplementation>();
 
 var app = builder.Build();
 

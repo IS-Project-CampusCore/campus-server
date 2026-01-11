@@ -13,8 +13,10 @@ public class CreateGroup(ILogger<CreateGroup> logger) : CampusEndpoint<string>(l
 
     public override void Configure()
     {
-        Post("api/chat/group");
+        Post("api/chat/group-create");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(string req, CancellationToken cancellationToken)

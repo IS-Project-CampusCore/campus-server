@@ -13,6 +13,10 @@ public class ChatService(IMediator mediator) : chatService.chatServiceBase
     {
         return await _mediator.Send(request, context.CancellationToken);
     }
+    public override async Task<MessageResponse> DeleteGroup(DeleteGroupRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request, context.CancellationToken);
+    }
     public override async Task<MessageResponse> AddGroupMember(AddMemberRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request, context.CancellationToken);
@@ -21,7 +25,15 @@ public class ChatService(IMediator mediator) : chatService.chatServiceBase
     {
         return await _mediator.Send(request, context.CancellationToken);
     }
-    public override async Task<MessageResponse> GetUserGroups(GetGroupsRequest request, ServerCallContext context)
+    public override async Task<MessageResponse> LeaveGroup(LeaveGroupRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request, context.CancellationToken);
+    }
+    public override async Task<MessageResponse> GetUserGroups(GetUserGroupsRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request, context.CancellationToken);
+    }
+    public override async Task<MessageResponse> GetGroup(GetGroupRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request, context.CancellationToken);
     }

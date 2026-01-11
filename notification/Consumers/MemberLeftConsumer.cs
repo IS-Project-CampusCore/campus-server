@@ -1,12 +1,12 @@
 ﻿using commons.EventBase;
-using notification.Hubs;
 using commons.SignalRBase;
+using notification.Hubs;
 
 namespace notification.Consumers;
 
-[Envelope("MemberRemoved")]
-public class MemberRemovedConsumer(
-    ILogger<MemberRemovedConsumer> logger,
+[Envelope("MemberLeft")]
+public class MemberLeftConsumer(
+    ILogger<MemberLeftConsumer> logger,
     INotifier<ChatHub> notifier,
     IConnectionMapping<ChatHub> connectionMapping
     ) : SignalRConsumer<ChatHub>(logger, notifier, connectionMapping), ISignalRDefinition
@@ -15,16 +15,18 @@ public class MemberRemovedConsumer(
     {
         GroupId = "Group's Id",
         MemberId = "Member's Id",
-        MemberName = "Member's Name"
+        MemberName = "Member's Name",
+        NewAdminId = "Group's new Admin Id"
     };
 
-    public static string Message => "RemoveMember";
+    public static string Message => "MemberLeft";
 
     public static object Content => new
     {
         GroupId = "Group's Id",
         MemberId = "Member's Id",
-        MemberName = "Member's Name"
+        MemberName = "Member's Name",
+        NewAdminId = "Group's new Admin Id"
     };
 
     protected override async Task HandleMessage(commons.Protos.MessageBody body)
@@ -32,6 +34,7 @@ public class MemberRemovedConsumer(
         string groupId = body.GetString("GroupId");
         string memberId = body.GetString("MemberId");
         string memberName = body.GetString("MemberName");
+        string newAdminId = body.GetString("NewAdminId");
 
         await _notifier.RemoveUserFromGroupAsync(memberId, groupId);
 
@@ -42,9 +45,10 @@ public class MemberRemovedConsumer(
             {
                 GroupId = groupId,
                 MemberId = memberId,
-                MemberName = memberName
+                MemberName = memberName,
+                NewAdminId = newAdminId
             });
 
-        _logger.LogInformation($"User:{memberName} ({memberId}) removed from Group:{groupId}");
+        _logger.LogInformation($"User:{memberName} ({memberId}) left Group:{groupId}");
     }
 }

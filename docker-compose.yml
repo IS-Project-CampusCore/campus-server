@@ -85,6 +85,8 @@ services:
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
       - Logging__SeqUrl=http://seq
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=users
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
     depends_on:
       - email

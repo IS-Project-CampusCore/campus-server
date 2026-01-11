@@ -6,10 +6,10 @@ namespace chat.Services;
 
 public class RemoveGroupMemberMessage(
     ILogger<RemoveGroupMemberMessage> logger,
-    ChatServiceImplementation implementation
+    IChatService implementation
 ) : CampusMessage<RemoveMemberRequest>(logger)
 {
-    private readonly ChatServiceImplementation _impl = implementation;
+    private readonly IChatService _impl = implementation;
 
     protected override async Task HandleMessage(RemoveMemberRequest request, CancellationToken cancellationToken)
         => await _impl.RemoveGroupMemberAsync(request.GroupId, request.MemberId);

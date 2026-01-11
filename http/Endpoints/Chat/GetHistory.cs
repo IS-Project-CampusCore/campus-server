@@ -13,6 +13,8 @@ public class GetHistory(ILogger<SendMessage> logger) : CampusEndpoint<GetHistory
     {
         Get("api/chat/history");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(GetHistoryApiRequest req, CancellationToken cancellationToken)

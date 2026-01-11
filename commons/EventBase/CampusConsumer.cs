@@ -67,6 +67,8 @@ public abstract class CampusConsumerBase<TResponse>(
                 {
                     await context.RespondAsync(ex.ToResponse());
                 }
+                else
+                    throw;
             }
             catch (ServiceMessageException ex)
             {
@@ -75,6 +77,8 @@ public abstract class CampusConsumerBase<TResponse>(
                 {
                     await context.RespondAsync(ex.ToResponse());
                 }
+                else
+                    throw;
             }
             catch (Exception ex)
             {

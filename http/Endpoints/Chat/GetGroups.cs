@@ -13,11 +13,13 @@ public class GetGroups(ILogger<GetGroups> logger) : CampusEndpoint(logger)
     {
         Get("api/chat/groups");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)
     {
-        var grpcRequest = new GetGroupsRequest
+        var grpcRequest = new GetUserGroupsRequest
         {
             MemberId = GetUserId()
         };

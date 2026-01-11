@@ -12,6 +12,8 @@ public class RemoveMember(ILogger<RemoveMember> logger) : CampusEndpoint<MemberR
     {
         Post("api/chat/remove");
         Policies(CampusPolicy.AuthenticatedUser);
+
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(MemberRequest req, CancellationToken cancellationToken)

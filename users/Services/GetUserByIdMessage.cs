@@ -9,7 +9,7 @@ namespace users.Services;
 public class GetUserByIdMessage(
     ILogger<GetUserByIdMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<UserIdRequest, User>(logger)
+) : CampusMessage<UserIdRequest, User?>(logger)
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 

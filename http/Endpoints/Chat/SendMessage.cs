@@ -17,6 +17,7 @@ public class SendMessage(ILogger<SendMessage> logger) : CampusEndpoint<SendMessa
         AllowFileUploads();
 
         Policies(CampusPolicy.AuthenticatedUser);
+        Roles("student", "professor", "campus_student");
     }
 
     public override async Task HandleAsync(SendMessageApiRequest req, CancellationToken cancellationToken)

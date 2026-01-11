@@ -19,6 +19,17 @@ public partial class CreateGroupRequest : IRequestBase
         return null;
     }
 }
+
+public partial class DeleteGroupRequest : IRequestBase
+{
+    public string? Validate()
+    {
+        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(AdminId))
+            return "Delete Group request is empty";
+        return null;
+    }
+}
+
 public partial class AddMemberRequest : IRequestBase
 {
     public string? Validate()
@@ -37,9 +48,25 @@ public partial class RemoveMemberRequest : IRequestBase
         return null;
     }
 }
-public partial class GetGroupsRequest : IRequestBase
+
+public partial class LeaveGroupRequest : IRequestBase
 {
-    public string? Validate() => string.IsNullOrEmpty(MemberId) ? "Get Groups request is empty" : null;
+    public string? Validate()
+    {
+        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(MemberId))
+            return "Leave Group request is empty";
+        return null;
+    }
+}
+
+public partial class GetUserGroupsRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(MemberId) ? "Get User Groups request is empty" : null;
+}
+
+public partial class GetGroupRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(GroupId) ? "Get Group request is empty" : null;
 }
 
 public partial class UploadFileRequest : IRequestBase

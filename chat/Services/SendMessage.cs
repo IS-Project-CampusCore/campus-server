@@ -11,10 +11,10 @@ namespace Chat.Services;
 
 public class SendMessage(
     ILogger<SendMessage> logger,
-    ChatServiceImplementation implementation
+    IChatService implementation
 ) : CampusMessage<SendMessageRequest, ChatMessage>(logger)
 {
-    private readonly ChatServiceImplementation _impl = implementation;
+    private readonly IChatService _impl = implementation;
 
     protected override async Task<ChatMessage> HandleMessage(SendMessageRequest request, CancellationToken token)
     {

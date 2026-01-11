@@ -7,7 +7,7 @@ namespace commons.EventBase;
 
 public static class MassTransitExtension
 {
-    public static void RegisterConsumers(this IRabbitMqBusFactoryConfigurator cfg, IBusRegistrationContext context, Assembly assembly)
+    public static void RegisterConsumers(this IRabbitMqBusFactoryConfigurator cfg, IBusRegistrationContext context, Assembly assembly, string queuePrefix)
     {
         var consumers = assembly.GetTypes()
             .Where(t => !t.IsAbstract && typeof(IConsumer<Envelope>).IsAssignableFrom(t))
@@ -22,7 +22,7 @@ public static class MassTransitExtension
         {
             var eventName = consumer.Attribute!.EventName;
 
-            var queueName = $"notification-{PascalToKebabCase(eventName)}";
+            var queueName = $"{queuePrefix}-{PascalToKebabCase(eventName)}";
 
             cfg.ReceiveEndpoint(queueName, e =>
             {

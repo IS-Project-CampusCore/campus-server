@@ -9,9 +9,12 @@ package chatService;
 service chatService
 { 
     rpc CreateGroup (CreateGroupRequest) returns (commons.protos.MessageResponse);
+    rpc DeleteGroup (DeleteGroupRequest) returns (commons.protos.MessageResponse);
     rpc AddGroupMember (AddMemberRequest) returns (commons.protos.MessageResponse);
     rpc RemoveGroupMember (RemoveMemberRequest) returns (commons.protos.MessageResponse);
-    rpc GetUserGroups (GetGroupsRequest) returns (commons.protos.MessageResponse);
+    rpc LeaveGroup (LeaveGroupRequest) returns (commons.protos.MessageResponse);
+    rpc GetUserGroups (GetUserGroupsRequest) returns (commons.protos.MessageResponse);
+    rpc GetGroup (GetGroupRequest) returns (commons.protos.MessageResponse);
 
     rpc UploadFile (UploadFileRequest) returns (commons.protos.MessageResponse);
     rpc GetFile (GetFileRequest) returns (commons.protos.MessageResponse);
@@ -27,6 +30,12 @@ message CreateGroupRequest
     string adminId = 2;
 }
 
+message DeleteGroupRequest
+{
+    string groupId = 1;
+    string adminId = 2;
+}
+
 message AddMemberRequest
 {
     string groupId = 1;
@@ -39,9 +48,20 @@ message RemoveMemberRequest
     string memberId = 2;
 }
 
-message GetGroupsRequest
+message LeaveGroupRequest
+{
+    string groupId = 1;
+    string memberId = 2;
+}
+
+message GetUserGroupsRequest
 {
     string memberId = 1;
+}
+
+message GetGroupRequest
+{
+    string groupId = 1;
 }
 
 message UploadFileRequest
