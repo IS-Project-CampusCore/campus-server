@@ -9,10 +9,10 @@ namespace Notification.Services;
 
 public class ExampleMessage(
     ILogger<ExampleMessage> logger,
-    NotificationServiceImplementation implementation
+    ChatNotificationImplementation implementation
 ) : IRequestHandler<ExampleRequest, MessageResponse>
 {
-    private readonly NotificationServiceImplementation _impl = implementation;
+    private readonly ChatNotificationImplementation _impl = implementation;
     private readonly ILogger<ExampleMessage> _logger = logger;
 
     public Task<MessageResponse> Handle(ExampleRequest request, CancellationToken token)

@@ -1,0 +1,77 @@
+﻿<!-- SUBJECT: Mesaj Nou în CampusCore -->
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mesaj Nou</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f2f5f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', sans-serif;">
+    <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); overflow: hidden;">
+        <tr>
+            <td align="center" style="background-color: #004a99; padding: 30px 20px;">
+                <h1 style="color: #ffffff; font-size: 28px; font-weight: 600; margin: 0; letter-spacing: 0.5px;">CampusCore</h1>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 40px 30px 20px;">
+                <h2 style="color: #333333; font-size: 22px; font-weight: 600; margin-top: 0; margin-bottom: 20px;">
+                    Ai primit un mesaj nou!
+                </h2>
+                <p style="color: #555555; font-size: 16px; line-height: 1.6; margin-bottom: 5px;">
+                    <strong>De la:</strong> {{sender_name}}
+                </p>
+                <p style="color: #888888; font-size: 14px; margin-top: 0; margin-bottom: 20px;">
+                    {{sent_at}}
+                </p>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 0 30px 20px;">
+                <div style="background-color: #f9f9f9;
+                            border-left: 4px solid #005bb5;
+                            padding: 15px 20px;
+                            border-radius: 4px;
+                            color: #333333;
+                            font-size: 16px;
+                            line-height: 1.6;
+                            font-style: italic;">
+                    {{content}}
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td style="padding: 0px 30px 40px;">
+                <p style="color: #555555; font-size: 15px; margin-top: 10px;">
+                    <strong>📎 Fișiere atașate:</strong> {{files_count}}
+                </p>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <a href="#" style="background-color: #005bb5;
+                                      color: #ffffff;
+                                      font-size: 16px;
+                                      font-weight: 600;
+                                      text-decoration: none;
+                                      padding: 12px 30px;
+                                      border-radius: 6px;
+                                      display: inline-block;">
+                        Răspunde acum
+                    </a>
+                </div>
+            </td>
+        </tr>
+
+        <tr>
+            <td align="center" style="background-color: #f9f9f9; padding: 30px 20px; border-top: 1px solid #eeeeee;">
+                <p style="color: #888888; font-size: 12px; margin: 0;">
+                    &copy; 2025 CampusCore. Toate drepturile rezervate.<br>
+                    Acesta este un mesaj automat. Te rugăm să nu răspunzi la acest email.
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

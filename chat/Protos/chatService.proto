@@ -15,6 +15,7 @@ service chatService
     rpc LeaveGroup (LeaveGroupRequest) returns (commons.protos.MessageResponse);
     rpc GetUserGroups (GetUserGroupsRequest) returns (commons.protos.MessageResponse);
     rpc GetGroup (GetGroupRequest) returns (commons.protos.MessageResponse);
+    rpc GetGroupMembers (GetGroupMembersRequest) returns (commons.protos.MessageResponse);
 
     rpc UploadFile (UploadFileRequest) returns (commons.protos.MessageResponse);
     rpc GetFile (GetFileRequest) returns (commons.protos.MessageResponse);
@@ -60,6 +61,11 @@ message GetUserGroupsRequest
 }
 
 message GetGroupRequest
+{
+    string groupId = 1;
+}
+
+message GetGroupMembersRequest
 {
     string groupId = 1;
 }

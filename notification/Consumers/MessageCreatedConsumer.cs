@@ -1,6 +1,10 @@
 ﻿using commons.EventBase;
 using notification.Hubs;
 using commons.SignalRBase;
+using chatServiceClient;
+using emailServiceClient;
+using Notification.Implementation;
+using System.Text.Json;
 
 namespace notification.Consumers;
 
@@ -8,14 +12,15 @@ namespace notification.Consumers;
 public class MessageCreatedConsumer(
     ILogger<MessageCreatedConsumer> logger,
     INotifier<ChatHub> notifier,
-    IConnectionMapping<ChatHub> connectionMapping
+    IConnectionMapping<ChatHub> connectionMapping,
+    ChatNotificationImplementation implementation
     ) : SignalRConsumer<ChatHub>(logger, notifier, connectionMapping), ISignalRDefinition
 {
     public static object Example => new
     {
         SenderId = "Sender's Id",
         GroupId = "Group's Id",
-        MemberName = "Member's Name",
+        SenderName = "Member's Name",
         Content = "Text Message",
         FilesId = new [] {"File 1 Id", "File 2 Id" },
         SentAt = "Time"
@@ -30,9 +35,12 @@ public class MessageCreatedConsumer(
         At = "Time"
     };
 
+    private readonly ChatNotificationImplementation _implementation = implementation;
+
     protected override async Task HandleMessage(commons.Protos.MessageBody body)
     {
         string senderId = body.GetString("SenderId");
+        string senderName = body.GetString("SenderName");
         string groupId = body.GetString("GroupId");
         string? content = body.TryGetString("Content");
         var filesId = body.TryGetArray("FilesId")?.IterateStrings();
@@ -51,5 +59,17 @@ public class MessageCreatedConsumer(
                 Files = filesId,
                 At = sentAt,
             });
+
+        await _implementation.SendEmailToOfflineMembers(
+            groupId,
+            [senderId],
+            "NewMessage",
+            JsonSerializer.Serialize(new
+            {
+                Sender_Name = senderName,
+                Sent_At = sentAt.ToString("dd MMM yyyy, HH:mm"),
+                Content = content,
+                Files_Count = filesId?.Count().ToString() ?? "0"
+            }));
     }
 }

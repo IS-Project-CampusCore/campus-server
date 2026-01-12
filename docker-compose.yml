@@ -92,6 +92,7 @@ services:
       - email
       - excel
       - seq
+      - mongo
     networks:
       - campus-network
 
@@ -162,6 +163,7 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__ChatService=http://chat:8080
       - GrpcServices__UsersService=http://users:8080
+      - GrpcServices__EmailService=http://email:8080
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - RabbitMq__Host=rabbitmq

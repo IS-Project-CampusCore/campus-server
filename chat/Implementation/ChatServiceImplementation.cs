@@ -19,6 +19,7 @@ public interface IChatService
     Task LeaveGroupAsync(string groupId, string memberId);
     Task<IEnumerable<Group>?> GetUserGroupsAsync(string memberId);
     Task<Group> GetGroupByIdAsync(string groupId);
+    Task<IEnumerable<string>> GetGroupMembersAsync(string groupId);
 
     Task<ChatFile> UploadFileAsync(string name, string groupId, byte[] data);
     Task<byte[]> GetFileByIdAsync(string fileId);
@@ -227,6 +228,18 @@ public class ChatServiceImplementation(
         return res;
     }
 
+    public async Task<IEnumerable<string>> GetGroupMembersAsync(string groupId)
+    {
+        var group = await GetGroupByIdAsync(groupId);
+        if (group is null)
+        {
+            _logger.LogInformation($"Group:{groupId} not found");
+            throw new BadRequestException("Group not found");
+        }
+
+        return group.MembersId;
+    }
+
     public async Task<ChatFile> UploadFileAsync(string name, string groupId, byte[] data)
     {
         Group group = await GetGroupByIdAsync(groupId);
@@ -339,7 +352,7 @@ public class ChatServiceImplementation(
             throw new BadRequestException("Message can not be empty");
         }
 
-        var senderName = GetUserName(senderId); 
+        var senderName = await GetUserName(senderId); 
 
         var group = await GetGroupByIdAsync(groupId);
         if (group is null)
@@ -360,7 +373,15 @@ public class ChatServiceImplementation(
         var messages = await _messages;
         string id = await messages.InsertAsync(message);
 
-        await _publisher.Publish("MessageCreated", message);
+        await _publisher.Publish("MessageCreated", new
+        {
+            SenderId = senderId,
+            SenderName = senderName,
+            GroupId = groupId,
+            Content = content,
+            FilesId = filesId,
+            SentAt = DateTime.UtcNow
+        });
 
         return message;
     }

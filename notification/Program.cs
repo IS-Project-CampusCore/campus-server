@@ -1,4 +1,5 @@
 using chatServiceClient;
+using emailServiceClient;
 using commons.EventBase;
 using commons.RequestBase;
 using MassTransit;
@@ -99,9 +100,15 @@ builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:EmailService"];
+    o.Address = new Uri(address!);
+});
+
 builder.Services.AddScoped<ServiceInterceptor>();
 
-builder.Services.AddSingleton<NotificationServiceImplementation>();
+builder.Services.AddSingleton<ChatNotificationImplementation>();
 builder.Services.AddSingleton<IConnectionMapping<ChatHub>, ConnectionMapping<ChatHub>>();
 builder.Services.AddScoped<INotifier<ChatHub>, HubNotifier<ChatHub>>();
 

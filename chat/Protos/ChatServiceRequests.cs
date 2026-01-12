@@ -69,6 +69,11 @@ public partial class GetGroupRequest : IRequestBase
     public string? Validate() => string.IsNullOrEmpty(GroupId) ? "Get Group request is empty" : null;
 }
 
+public partial class GetGroupMembersRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(GroupId) ? "Get Group Members request is empty" : null;
+}
+
 public partial class UploadFileRequest : IRequestBase
 {
     public string? Validate()
