@@ -73,7 +73,7 @@ public class UsersServiceImplementation(
         await UpdateUser(user);
 
         _logger.LogInformation($"User:{user.Id} has been authenticated");
-        return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Role));
+        return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Name, user.Role));
     }
 
     public async Task<User?> RegisterUser(string email, string name, UserType role)
@@ -195,7 +195,7 @@ public class UsersServiceImplementation(
 
             await UpdateUser(user);
 
-            return new UserWithJwt(user, GenerateJwtToken(user.Id, email, user.Role));
+            return new UserWithJwt(user, GenerateJwtToken(user.Id, email, user.Name, user.Role));
         }
         catch (BadRequestException ex)
         {
@@ -436,7 +436,7 @@ public class UsersServiceImplementation(
     private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
     private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
 
-    private string GenerateJwtToken(string userId, string userEmail, UserType role)
+    private string GenerateJwtToken(string userId, string userEmail, string userName, UserType role)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.ASCII.GetBytes(_config["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex");
@@ -444,6 +444,7 @@ public class UsersServiceImplementation(
         {
             new Claim(UserJwtExtensions.IdClaim, userId),
             new Claim(UserJwtExtensions.EmailClaim, userEmail),
+            new Claim(UserJwtExtensions.NameClaim, userName),
             new Claim(UserJwtExtensions.RoleClaim, role.ToString().ToLowerInvariant()),
             new Claim(UserJwtExtensions.IsVerifiedClaim, "true")
         };

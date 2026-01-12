@@ -16,7 +16,7 @@ public record UserJwt
 public static class UserJwtExtensions
 {
     public const string IdClaim = JwtRegisteredClaimNames.Sub;
-    public const string RoleClaim = ClaimTypes.Role;
+    public const string RoleClaim = "role";
     public const string NameClaim = JwtRegisteredClaimNames.Name;
     public const string EmailClaim = JwtRegisteredClaimNames.Email;
     public const string IsVerifiedClaim = JwtRegisteredClaimNames.EmailVerified;

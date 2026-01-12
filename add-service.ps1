@@ -143,6 +143,8 @@ if (Test-Path $composeFile) {
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+    networks:
+      - campus-network
 "@
 
     Add-Content -Path $composeFile -Value $newServiceBlock

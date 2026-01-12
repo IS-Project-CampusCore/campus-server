@@ -7,7 +7,7 @@ using System.Text.Json;
 
 namespace http.Endpoints;
 
-public class CampusEndpoint<TReq>(ILogger logger) : CampusEndpointBase<TReq>(logger) where TReq : notnull
+public abstract class CampusEndpoint<TReq>(ILogger logger) : CampusEndpointBase<TReq>(logger) where TReq : notnull
 {
     protected async Task SendAsync(MessageResponse response, CancellationToken cancellationToken)
     {
@@ -21,7 +21,21 @@ public class CampusEndpoint<TReq>(ILogger logger) : CampusEndpointBase<TReq>(log
     }
 }
 
-public class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, JsonElement> where TReq : notnull
+public abstract class CampusEndpoint(ILogger logger) : CampusEndpointBase<EmptyRequest>(logger)
+{
+    protected async Task SendAsync(MessageResponse response, CancellationToken cancellationToken)
+    {
+        if (!response.Success)
+        {
+            await HandleErrorsAsync(response, cancellationToken);
+            return;
+        }
+
+        await Send.OkAsync(response.Payload.Json, cancellationToken);
+    }
+}
+
+public abstract class CampusEndpointBase<TReq>(ILogger logger) : Endpoint<TReq, JsonElement> where TReq : notnull
 {
     protected void AllowUnverifiedUser()
     {

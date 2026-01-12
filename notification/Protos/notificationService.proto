@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "notificationServiceClient";
+
+package notificationService;
+
+service notificationService
+{ 
+    rpc ExampleMessage (ExampleRequest) returns (commons.protos.MessageResponse);
+}
+
+message ExampleRequest
+{
+  string message = 1;
+}
