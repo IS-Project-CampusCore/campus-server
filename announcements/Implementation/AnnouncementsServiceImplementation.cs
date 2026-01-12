@@ -1,133 +1,153 @@
-﻿using commons;
+﻿using Announcements.Model;
+using announcementsServiceClient;
 using commons.Database;
 using commons.RequestBase;
 using commons.Tools;
 using emailServiceClient;
-using usersServiceClient;
+using Grpc.Net.Client;
 using MongoDB.Driver;
 using System.Text.Json;
-using Announcements.Model;
+using usersServiceClient;
 
-namespace Announcements.Implementation;
+namespace announcements.Implementation;
 
-public class AnnouncementsServiceImplementation(
-    ILogger<AnnouncementsServiceImplementation> logger,
+public class AnnouncementServiceImplementation(
+    ILogger<AnnouncementServiceImplementation> logger,
     IDatabase database,
-    usersService.usersServiceClient usersClient,
-    emailService.emailServiceClient emailClient
-    )
+    IConfiguration config)
 {
-    private readonly ILogger<AnnouncementsServiceImplementation> _logger = logger;
-    private readonly usersService.usersServiceClient _usersClient = usersClient;
-    private readonly emailService.emailServiceClient _emailClient = emailClient;
+    private readonly ILogger<AnnouncementServiceImplementation> _logger = logger;
+    private readonly AsyncLazy<IDatabaseCollection<Announcement>> _announcements = new(() => GetCollection(database));
 
-    private readonly AsyncLazy<IDatabaseCollection<Announcement>> _announcementsCollection = new(() => GetAnnouncementCollection(database));
+    private readonly string _userServiceUrl = config["Microservices:Users"] ?? "http://users:8080";
+    private readonly string _emailServiceUrl = config["Microservices:Email"] ?? "http://email:8080";
 
-    public async Task CreateAnnouncement(string title, string message, string authorId)
+    public async Task<Announcement> CreateAsync(CreateAnnouncementRequest request)
     {
-        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(message))
-        {
-            throw new BadRequestException("Title and Message cannot be empty.");
-        }
+        var collection = await _announcements;
 
-        var db = await _announcementsCollection;
-
-        var newAnnouncement = new Announcement
+        var announcement = new Announcement
         {
-            Title = title,
-            Message = message,
-            AuthorId = authorId,
+            Title = request.Title,
+            Message = request.Message,
+            Author = request.Author,
             CreatedAt = DateTime.UtcNow,
-            UpdatedAt = null
+            LastEditedAt = DateTime.UtcNow
         };
 
-        await db.InsertAsync(newAnnouncement);
+        await collection.InsertAsync(announcement);
 
-        _logger.LogInformation($"Announcement '{title}' created by {authorId}");
+        _ = NotifyAllUsers("New Announcement: " + request.Title, request.Message);
 
-        // Fire and forget notification (sau await dacă vrei să blochezi până se trimit)
-        await NotifyAllUsers($"New Announcement: {title}", message);
+        return announcement;
     }
 
-    public async Task EditAnnouncement(string id, string newTitle, string newMessage)
+    public async Task<Announcement> EditAsync(EditAnnouncementRequest request)
     {
-        var db = await _announcementsCollection;
-        var announcement = await db.GetOneByIdAsync(id);
+        var collection = await _announcements;
+        var announcement = await collection.GetOneByIdAsync(request.Id);
 
         if (announcement is null)
         {
-            throw new NotFoundException($"Announcement with id {id} not found.");
+            throw new NotFoundException($"Announcement {request.Id} not found");
         }
 
-        announcement.Title = newTitle;
-        announcement.Message = newMessage;
-        announcement.UpdatedAt = DateTime.UtcNow;
+        announcement.Title = request.NewTitle;
+        announcement.Message = request.NewMessage;
+        announcement.LastEditedAt = DateTime.UtcNow;
 
-        await db.ReplaceAsync(announcement);
+        await collection.ReplaceAsync(announcement);
 
-        _logger.LogInformation($"Announcement '{id}' has been updated");
+        _ = NotifyAllUsers("Updated Announcement: " + request.NewTitle, request.NewMessage);
 
-        await NotifyAllUsers($"Updated Announcement: {newTitle}", newMessage);
+        return announcement;
     }
 
-    public async Task DeleteAnnouncement(string id)
+    public async Task<bool> DeleteAsync(string id)
     {
-        var db = await _announcementsCollection;
+        var collection = await _announcements;
+        var announcement = await collection.GetOneByIdAsync(id);
 
-        bool exists = await db.ExistsAsync(a => a.Id == id);
-
-        if (!exists)
+        if (announcement is null)
         {
-            throw new NotFoundException($"Announcement with id {id} not found.");
+            throw new NotFoundException($"Announcement {id} not found");
         }
 
-        await db.DeleteWithIdAsync(id);
-
-        _logger.LogInformation($"Announcement with ID:{id} has been deleted.");
+        await collection.DeleteWithIdAsync(id);
+        return true;
     }
 
     private async Task NotifyAllUsers(string subject, string content)
     {
         try
         {
-            var allUsersResponse = await _usersClient.GetAllUsersAsync("new EmptyRequest()");
+            var users = await FetchAllUsers();
+            if (users is null || users.Count == 0) return;
 
-            if (allUsersResponse == null || allUsersResponse.Users.Count == 0) return;
+            using var channel = GrpcChannel.ForAddress(_emailServiceUrl);
+            var client = new emailService.emailServiceClient(channel);
 
-            foreach (var user in allUsersResponse.Users)
+            foreach (var user in users)
             {
-                string templateDataString = JsonSerializer.Serialize(new
-                {
-                    Name = user.Name,
-                    Title = subject,
-                    Message = content
-                });
+                if (string.IsNullOrEmpty(user.Email)) continue;
 
-                await _emailClient.SendEmailAsync(new SendEmailRequest
+                var emailReq = new SendEmailRequest
                 {
                     ToEmail = user.Email,
-                    ToName = user.Name,
-                    TemplateName = "Announcement", 
-                    TemplateData = templateDataString
-                });
+                    ToName = user.Name ?? "Student",
+                    TemplateName = "Announcement",
+                    TemplateData = JsonSerializer.Serialize(new { Subject = subject, Body = content })
+                };
+
+                try
+                {
+                    await client.SendEmailAsync(emailReq);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, $"Failed to send email to {user.Email}");
+                }
             }
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to broadcast announcement emails.");
+            _logger.LogError(ex, "Failed to execute NotifyAllUsers flow");
         }
     }
 
-    internal static async Task<IDatabaseCollection<Announcement>> GetAnnouncementCollection(IDatabase database)
+    private async Task<List<UserDto>?> FetchAllUsers()
+    {
+        using var channel = GrpcChannel.ForAddress(_userServiceUrl);
+        var client = new usersService.usersServiceClient(channel);
+
+        var response = await client.GetAllUsersAsync(new GetAllUsersRequest { Placeholder = "" });
+
+        if (!response.Success || string.IsNullOrEmpty(response.Body))
+        {
+            _logger.LogWarning("Could not fetch users: " + response.Errors);
+            return [];
+        }
+
+        return JsonSerializer.Deserialize<List<UserDto>>(response.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+    }
+
+    internal static async Task<IDatabaseCollection<Announcement>> GetCollection(IDatabase database)
     {
         var collection = database.GetCollection<Announcement>();
 
-        var createdAtIndex = Builders<Announcement>.IndexKeys.Descending(a => a.CreatedAt);
+        var authorIndex = Builders<Announcement>.IndexKeys.Ascending(a => a.Author);
 
-        await collection.MongoCollection.Indexes.CreateOneAsync(
-            new CreateIndexModel<Announcement>(createdAtIndex, new CreateIndexOptions { Name = "AnnouncementCreatedAtIndex" })
-        );
+        await collection.MongoCollection.Indexes.CreateManyAsync([
+            new CreateIndexModel<Announcement>(authorIndex, new CreateIndexOptions { Name = "AnnouncementAuthorIndex" })
+        ]);
 
         return collection;
     }
+}
+
+public class UserDto
+{
+    public string? Id { get; set; }
+    public string? Email { get; set; }
+    public string? Name { get; set; }
 }

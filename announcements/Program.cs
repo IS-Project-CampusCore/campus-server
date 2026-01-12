@@ -1,11 +1,10 @@
+using announcements;
+using announcements.Implementation;
+using commons.Database;
+using commons.RequestBase;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using Announcements.Services;
-using commons;
-using Announcements;
-using Announcements.Implementation;
-using commons.RequestBase;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +23,11 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
+string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
+
+builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
+
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(AnnouncementsService).Assembly);
@@ -36,7 +40,7 @@ builder.Services.AddGrpc(options =>
 });
 builder.Services.AddScoped<ServiceInterceptor>();
 
-builder.Services.AddSingleton<AnnouncementsServiceImplementation>();
+builder.Services.AddSingleton<AnnouncementServiceImplementation>();
 
 var app = builder.Build();
 

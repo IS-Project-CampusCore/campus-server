@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="Services\AnnouncementsMessage.cs" />
+    <None Include="Services\CreateAnnouncementMessage.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,19 +1,13 @@
 ﻿using commons.Database;
-using MongoDB.Bson;
-using MongoDB.Bson.Serialization.Attributes;
 
 namespace Announcements.Model;
 
 [CollectionName("Announcements")]
 public record Announcement : DatabaseModel
 {
-
-    public required string Title { get; set; } = string.Empty;
-    public required string Message { get; set; } = string.Empty;
-    public required string AuthorId { get; set; } = string.Empty;
-
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime? UpdatedAt { get; set; } 
-
-    public Announcement() { }
+    public string Title { get; set; } = default!;
+    public string Message { get; set; } = default!;
+    public string Author { get; set; } = default!;
+    public DateTime CreatedAt { get; set; }
+    public DateTime LastEditedAt { get; set; }
 }

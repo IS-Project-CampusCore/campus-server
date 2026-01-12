@@ -9,7 +9,6 @@ public enum UserType { GUEST, ADMIN, MANAGEMENT, STUDENT, PROFESSOR, CAMPUS_STUD
 [CollectionName("Users")]
 public record User : DatabaseModel
 {
-    // Id is inherited from DatabaseModel (ObjectId)
 
     public required string Name { get; set; } = string.Empty;
     public required string Email { get; set; } = string.Empty;
@@ -18,7 +17,7 @@ public record User : DatabaseModel
     [BsonRepresentation(BsonType.String)]
     public required UserType Role { get; set; } = UserType.GUEST;
 
-    public bool IsVerified { get; set; } = false; // Changed to property for serialization
+    public bool IsVerified { get; set; } = false; 
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastLoginAt { get; set; } = DateTime.UtcNow;
@@ -32,7 +31,6 @@ public record User : DatabaseModel
 
     public static UserType StringToRole(string role)
     {
-        // Your existing static mapper logic remains valid
         string roleLower = role.ToLower();
         if (roleLower == "guest") return UserType.GUEST;
         else if (roleLower == "admin") return UserType.ADMIN;

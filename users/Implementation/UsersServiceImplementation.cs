@@ -29,6 +29,8 @@ public interface IUsersServiceImplementation
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
+
+    Task<List<User>> GetAllUsers();
 }
 
 public class UsersServiceImplementation(
@@ -47,6 +49,11 @@ public class UsersServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
 
+    public async Task<List<User>> GetAllUsers()
+    {
+        var db = await _usersCollection;
+        return await db.MongoCollection.Find(_ => true).ToListAsync();
+    }
     public async Task<User?> GetUserById(string id)
     {
         var db = await _usersCollection;

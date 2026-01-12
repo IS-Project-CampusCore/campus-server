@@ -14,14 +14,14 @@ message CreateAnnouncementRequest
 {
     string title = 1;
     string message = 2;
-    string author_id = 3; 
+    string author = 3; 
 }
 
 message EditAnnouncementRequest
 {
     string id = 1;
-    string new_title = 2;
-    string new_message = 3;
+    string newTitle = 2;
+    string newMessage = 3;
 }
 
 message DeleteAnnouncementRequest

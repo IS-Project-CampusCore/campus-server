@@ -1,3 +1,4 @@
+using announcementsServiceClient;
 using excelServiceClient;
 using FastEndpoints;
 using http.Auth;
@@ -44,6 +45,11 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:AnnouncementsService"];
+    o.Address = new Uri(address!);
+});
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = CampusAuthentication.SchemeName;
