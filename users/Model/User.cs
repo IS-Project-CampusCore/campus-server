@@ -9,7 +9,6 @@ public enum UserType { GUEST, ADMIN, MANAGEMENT, STUDENT, PROFESSOR, CAMPUS_STUD
 [CollectionName("Users")]
 public record User : DatabaseModel
 {
-
     public required string Name { get; set; } = string.Empty;
     public required string Email { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;

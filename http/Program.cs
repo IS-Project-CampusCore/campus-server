@@ -1,15 +1,20 @@
 using announcementsServiceClient;
+using chatServiceClient;
 using excelServiceClient;
 using FastEndpoints;
 using http.Auth;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
+using System.Net;
 using usersServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
 var builder = WebApplication.CreateBuilder(args);
+
+Console.Clear();
+
 builder.Host.UseSerilog((context, config) =>
 {
     config
@@ -19,13 +24,11 @@ builder.Host.UseSerilog((context, config) =>
 
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ConfigureHttpsDefaults(httpsOptions =>
+    options.Listen(IPAddress.Any, 8080, listenOptions =>
     {
-        httpsOptions.ClientCertificateMode = ClientCertificateMode.NoCertificate;
+        listenOptions.Protocols = HttpProtocols.Http1AndHttp2;
     });
 });
-
-builder.Services.AddGrpc();
 
 builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
 {
@@ -45,11 +48,18 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:ChatService"];
+    o.Address = new Uri(address!);
+});
+
 builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:AnnouncementsService"];
     o.Address = new Uri(address!);
 });
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = CampusAuthentication.SchemeName;
@@ -71,6 +81,9 @@ app.UseAuthentication();
 
 app.UseAuthorization();
 
-app.UseFastEndpoints();
+app.UseFastEndpoints(c =>
+{
+    c.Serializer.Options.PropertyNamingPolicy = null;
+});
 
 app.Run();
