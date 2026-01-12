@@ -34,7 +34,7 @@ public partial class AddMemberRequest : IRequestBase
 {
     public string? Validate()
     {
-        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(MemberId))
+        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(MemberId) || string.IsNullOrEmpty(AddedById))
             return "Add Group Member request is empty";
         return null;
     }
@@ -43,7 +43,7 @@ public partial class RemoveMemberRequest : IRequestBase
 {
     public string? Validate()
     {
-        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(MemberId))
+        if (string.IsNullOrEmpty(GroupId) || string.IsNullOrEmpty(MemberId) || string.IsNullOrEmpty(RemovedById))
             return "Remove Group Member request is empty";
         return null;
     }

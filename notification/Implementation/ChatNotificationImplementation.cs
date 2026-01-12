@@ -23,7 +23,7 @@ public class ChatNotificationImplementation(
     private readonly usersService.usersServiceClient _usersService = usersService;
     private readonly emailService.emailServiceClient _emailService = emailService;
 
-    public async Task SendEmailToOfflineMembers(string groupId, string[] skipMembers, string emailTemplateName, string emailTemplateData)
+    public async Task SendBroadcastNotification(string groupId, string senderIdToSkip, string emailTemplateName, string emailTemplateData)
     {
         var groupMembersRes = await _chatService.GetGroupMembersAsync(new GetGroupMembersRequest { GroupId = groupId });
         if (!groupMembersRes.Success)
@@ -37,30 +37,51 @@ public class ChatNotificationImplementation(
 
         foreach (var memberId in memberIds)
         {
-            if (skipMembers.Contains(memberId))
+            if (senderIdToSkip == memberId)
                 continue;
 
             if (!IsUserOnline(memberId))
             {
-                var userRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memberId });
-                if (!userRes.Success)
-                {
-                    _logger.LogInformation($"Get User by Id failed with Code:{userRes.Code}, Errors:{userRes.Errors}");
-                    continue;
-                }
-
-                var userPayload = userRes.Payload;
-                var userEmail = userPayload.GetString("Email");
-                var userName = userPayload.GetString("Name");
-
-                await _emailService.SendEmailAsync(new SendEmailRequest {
-                    ToEmail = userEmail,
-                    ToName = userName,
-                    TemplateName = emailTemplateName,
-                    TemplateData = emailTemplateData
-                });
+                await SendEmailToMember(groupId, memberId, emailTemplateName, emailTemplateData);
             }
         }
+    }
+
+    public async Task SendTargetedNotification(string groupId, string targetedUserId, string emailTemplateName, string emailTemplateData)
+    {
+        if (!IsUserOnline(targetedUserId)) {
+            await SendEmailToMember(groupId, targetedUserId, emailTemplateName, emailTemplateData);
+        }
+    }
+
+    public async Task SendEmailToMember(string groupId, string memberId, string emailTemplateName, string emailTemplateData)
+    {
+        var userRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = memberId });
+        if (!userRes.Success)
+        {
+            _logger.LogInformation($"Get User by Id failed with Code:{userRes.Code}, Errors:{userRes.Errors}");
+            return;
+        }
+
+        var userPayload = userRes.Payload;
+        var userEmail = userPayload.GetString("Email");
+        var userName = userPayload.GetString("Name");
+
+        var emailRes = await _emailService.SendEmailAsync(new SendEmailRequest
+        {
+            ToEmail = userEmail,
+            ToName = userName,
+            TemplateName = emailTemplateName,
+            TemplateData = emailTemplateData
+        });
+
+        if (!emailRes.Success)
+        {
+            _logger.LogInformation($"Send Email failed with Code:{emailRes.Code}, Errors:{emailRes.Errors}");
+            return;
+        }
+
+        _logger.LogInformation($"Email Notification sent to Email:{userEmail}");
     }
 
     protected bool IsUserOnline(string userId)

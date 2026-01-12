@@ -12,6 +12,6 @@ public class AddGroupMemberMessage(
     private readonly IChatService _impl = implementation;
 
     protected override async Task HandleMessage(AddMemberRequest request, CancellationToken cancellationToken)
-        => await _impl.AddGroupMemberAsync(request.GroupId, request.MemberId);
+        => await _impl.AddGroupMemberAsync(request.GroupId, request.MemberId, request.AddedById);
 }
 

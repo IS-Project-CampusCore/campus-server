@@ -41,12 +41,14 @@ message AddMemberRequest
 {
     string groupId = 1;
     string memberId = 2;
+    string addedById = 3;
 }
 
 message RemoveMemberRequest
 {
     string groupId = 1;
     string memberId = 2;
+    string removedById = 3;
 }
 
 message LeaveGroupRequest

@@ -10,4 +10,5 @@ public record ChatMessage : DatabaseModel
     public string? Content { get; set; } = string.Empty;
     public List<string>? FilesId { get; set; } = null;
     public DateTime SentAt { get; set; } = DateTime.UtcNow;
+    public bool IsEvent { get; set; } = false;
 }

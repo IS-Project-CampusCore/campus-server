@@ -4,8 +4,9 @@ using commons.EventBase;
 using commons.RequestBase;
 using commons.Tools;
 using MongoDB.Driver;
-using System.Xml.Linq;
+using MongoDB.Driver.Core.Events;
 using usersServiceClient;
+using static MongoDB.Bson.Serialization.Serializers.SerializerHelper;
 
 namespace Chat.Implementation;
 
@@ -14,8 +15,8 @@ public interface IChatService
     Task<Group> CreateGroupAsync(string name, string adminId);
     Task DeleteGroupAsync(string groupId, string adminId);
     Task DeleteGroupCleanupAsync(string groupId);
-    Task AddGroupMemberAsync(string groupId, string memberId);
-    Task RemoveGroupMemberAsync(string groupId, string memberId);
+    Task AddGroupMemberAsync(string groupId, string memberId, string addedById);
+    Task RemoveGroupMemberAsync(string groupId, string memberId, string removedById);
     Task LeaveGroupAsync(string groupId, string memberId);
     Task<IEnumerable<Group>?> GetUserGroupsAsync(string memberId);
     Task<Group> GetGroupByIdAsync(string groupId);
@@ -97,8 +98,9 @@ public class ChatServiceImplementation(
             throw new BadRequestException("Non admin members cannot delete groups.");
         }
 
-        var groups = await _groups;
-        await groups.DeleteWithIdAsync(groupId);
+        string adminName = await GetUserName(adminId);
+
+        await SendGroupSystemMessageAsync(group, adminId, $"Group {group.Name} was deleted by {adminName}", "", true);
 
         await _publisher.Publish("GroupDeleted", new
         {
@@ -110,6 +112,9 @@ public class ChatServiceImplementation(
 
     public async Task DeleteGroupCleanupAsync(string groupId)
     {
+        var groups = await _groups;
+        await groups.DeleteWithIdAsync(groupId);
+
         if (!await DeleteGroupFilesAsync(groupId))
         {
             _logger.LogError("Delete files from database failed");
@@ -130,10 +135,10 @@ public class ChatServiceImplementation(
         return await groups.GetOneByIdAsync(groupId);
     }
 
-    public async Task AddGroupMemberAsync(string groupId, string memberId)
+    public async Task AddGroupMemberAsync(string groupId, string memberId, string addedById)
     {
         Group group = await GetGroupByIdAsync(groupId);
-        if (group is null)
+        if (group is null || !group.MembersId.Contains(addedById))
         {
             _logger.LogInformation($"Group not found for Id:{groupId}");
             throw new BadRequestException("Group not found");
@@ -160,12 +165,16 @@ public class ChatServiceImplementation(
             MemberId = memberId,
             MemberName = memberName
         });
+
+        var message = await InsertMessageAsync(memberId, groupId, $"New member {memberName} joined group {group.Name}", [], true);
+
+        await SendGroupSystemMessageAsync(group, memberId, message.Content!, $"You have been added to group {group.Name}", false);
     }
 
-    public async Task RemoveGroupMemberAsync(string groupId, string memberId)
+    public async Task RemoveGroupMemberAsync(string groupId, string memberId, string removedById)
     {
         var group = await GetGroupByIdAsync(groupId);
-        if (group is null)
+        if (group is null || !group.MembersId.Contains(removedById))
         {
             _logger.LogInformation($"Group not found for Id:{groupId}");
             throw new NotFoundException("Group not found");
@@ -352,8 +361,6 @@ public class ChatServiceImplementation(
             throw new BadRequestException("Message can not be empty");
         }
 
-        var senderName = await GetUserName(senderId); 
-
         var group = await GetGroupByIdAsync(groupId);
         if (group is null)
         {
@@ -361,23 +368,22 @@ public class ChatServiceImplementation(
             throw new NotFoundException("Group not found");
         }
 
-        var message = new ChatMessage
+        if (!group.MembersId.Contains(senderId))
         {
-            SenderId = senderId,
-            GroupId = groupId,
-            Content = content,
-            FilesId = filesId,
-            SentAt = DateTime.UtcNow,
-        };
+            _logger.LogInformation("Non members can not send messages to group");
+            throw new BadRequestException("User is not member of group");
+        }
 
-        var messages = await _messages;
-        string id = await messages.InsertAsync(message);
+        var senderName = await GetUserName(senderId);
+
+        var message = await InsertMessageAsync(senderId, groupId, content, filesId, false);
 
         await _publisher.Publish("MessageCreated", new
         {
             SenderId = senderId,
             SenderName = senderName,
             GroupId = groupId,
+            GroupName = group.Name,
             Content = content,
             FilesId = filesId,
             SentAt = DateTime.UtcNow
@@ -425,9 +431,41 @@ public class ChatServiceImplementation(
         return await chats.ToListAsync();
     }
 
+    private async Task SendGroupSystemMessageAsync(Group group, string subjectId, string publicContent, string privateContent, bool isBroadcast = false)
+    {
+        await _publisher.Publish("GroupSystemMessage", new
+        {
+            SubjectId = subjectId,
+            GroupId = group.Id,
+            GroupName = group.Name,
+            PublicContent = publicContent,
+            PrivateContent = privateContent,
+            SentAt = DateTime.UtcNow,
+            IsBroadcast = isBroadcast
+        });
+    }
+
+    private async Task<ChatMessage> InsertMessageAsync(string senderId, string groupId, string? content, List<string> fileIds, bool isEvent)
+    {
+        var message = new ChatMessage
+        {
+            SenderId = senderId,
+            GroupId = groupId,
+            Content = content,
+            FilesId = fileIds,
+            SentAt = DateTime.UtcNow,
+            IsEvent = isEvent
+        };
+
+        var messages = await _messages;
+        await messages.InsertAsync(message);
+
+        return message;
+    }
+
     private async Task RemoveMember(Group group, string memberId, bool isLeave)
     {
-        string? memberName = null;
+        string memberName;
         try
         {
             memberName = await GetUserName(memberId);
@@ -453,6 +491,10 @@ public class ChatServiceImplementation(
             MemberName = memberName,
             NewAdminId = group.AdminId
         });
+
+        var message = await InsertMessageAsync(memberId, group.Id, $"Member {memberName} {(isLeave ? "left the" : "was removed from")} group {group.Name}", [], true);
+
+        await SendGroupSystemMessageAsync(group, memberId, message.Content!, isLeave ? "" : $"You have been removed from group {group.Name}.", false);
     }
 
     private async Task<bool> DeleteGroupMessagesAsync(string groupId)

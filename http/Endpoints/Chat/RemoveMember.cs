@@ -28,6 +28,7 @@ public class RemoveMember(ILogger<RemoveMember> logger) : CampusEndpoint<MemberR
         {
             GroupId = req.GroupId,
             MemberId = req.MemberId,
+            RemovedById = GetUserId()
         };
 
         MessageResponse grpcResponse = await Client.RemoveGroupMemberAsync(grpcRequest, null, null, cancellationToken);

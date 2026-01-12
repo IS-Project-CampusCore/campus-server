@@ -31,6 +31,7 @@ public class AddMember(ILogger<AddMember> logger) : CampusEndpoint<MemberRequest
         {
             GroupId = req.GroupId,
             MemberId = req.MemberId,
+            AddedById = GetUserId()
         };
 
         MessageResponse grpcResponse = await Client.AddGroupMemberAsync(grpcRequest, null, null, cancellationToken);

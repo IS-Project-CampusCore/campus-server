@@ -143,10 +143,14 @@ services:
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=chat
     depends_on:
-      - seq
-      - users
-      - mongo
-      - rabbitmq
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+      users:
+        condition: service_started
+      mongo:
+        condition: service_started
     volumes:
       - ./FileStorage:/app/FileStorage
     networks:
@@ -173,6 +177,8 @@ services:
       seq:
         condition: service_started
       chat:
+        condition: service_started
+      email:
         condition: service_started
     networks:
       - campus-network

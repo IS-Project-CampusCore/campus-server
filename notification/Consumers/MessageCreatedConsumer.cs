@@ -19,8 +19,9 @@ public class MessageCreatedConsumer(
     public static object Example => new
     {
         SenderId = "Sender's Id",
-        GroupId = "Group's Id",
         SenderName = "Member's Name",
+        GroupId = "Group's Id",
+        GroupName = "Group's Name",
         Content = "Text Message",
         FilesId = new [] {"File 1 Id", "File 2 Id" },
         SentAt = "Time"
@@ -29,7 +30,7 @@ public class MessageCreatedConsumer(
     public static string Message => "NewMessage";
     public static object Content => new
     {
-        From = "Sender Id",
+        From = "Sender's Id",
         Content = "Text Content",
         Files = new[] { "File 1 Id", "File 2 Id" },
         At = "Time"
@@ -42,6 +43,7 @@ public class MessageCreatedConsumer(
         string senderId = body.GetString("SenderId");
         string senderName = body.GetString("SenderName");
         string groupId = body.GetString("GroupId");
+        string groupName = body.GetString("GroupName");
         string? content = body.TryGetString("Content");
         var filesId = body.TryGetArray("FilesId")?.IterateStrings();
 
@@ -60,16 +62,20 @@ public class MessageCreatedConsumer(
                 At = sentAt,
             });
 
-        await _implementation.SendEmailToOfflineMembers(
-            groupId,
-            [senderId],
-            "NewMessage",
-            JsonSerializer.Serialize(new
-            {
-                Sender_Name = senderName,
-                Sent_At = sentAt.ToString("dd MMM yyyy, HH:mm"),
-                Content = content,
-                Files_Count = filesId?.Count().ToString() ?? "0"
-            }));
+        string filesDisplay = (filesId != null && filesId.Any()) ? "style=\"display:table-row;\"" : "style=\"display:none;\"";
+        string contentDisplay = !string.IsNullOrWhiteSpace(content) ? "style=\"display:table-row;\"" : "style=\"display:none;\"";
+
+        string emailJsonData = JsonSerializer.Serialize(new
+        {
+            From = senderName,
+            Group = groupName,
+            Sent_At = sentAt.ToString("dd MMM yyyy, HH:mm"),
+            Content = content,
+            Content_Display = contentDisplay,
+            Files_Display = filesDisplay,
+            Files_Count = filesId?.Count().ToString() ?? "None"
+        });
+
+        await _implementation.SendBroadcastNotification(groupId, senderId, "NewMessage", emailJsonData);
     }
 }
