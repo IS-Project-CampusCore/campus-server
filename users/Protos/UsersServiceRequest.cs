@@ -55,3 +55,7 @@ public partial class ResetPasswordRequest : IRequestBase
 {
     public string? Validate() => string.IsNullOrEmpty(Email) ? "Email cannot be empty." : null;
 }
+public partial class GetAllUsersRequest : IRequestBase
+{
+    public string? Validate() => null;
+}

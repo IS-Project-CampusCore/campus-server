@@ -18,6 +18,7 @@ service usersService
     rpc ResendVerifyCode (ResendVerifyCodeRequest) returns (commons.protos.MessageResponse);
     rpc DeleteAccount (DeleteAccountRequest) returns (commons.protos.MessageResponse);
     rpc ResetPassword (ResetPasswordRequest) returns (commons.protos.MessageResponse);
+    rpc GetAllUsers (GetAllUsersRequest) returns (commons.protos.MessageResponse);
 }
 
 message UserIdRequest
@@ -62,4 +63,8 @@ message DeleteAccountRequest
 message ResetPasswordRequest 
 {
   string email = 1;
+}
+message GetAllUsersRequest 
+{
+  string placeholder = 1;
 }

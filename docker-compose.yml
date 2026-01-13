@@ -43,6 +43,7 @@ services:
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
+      - GrpcServices__AnnouncementsService=http://announcements:8080
       - GrpcServices__ChatService=http://chat:8080 
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
@@ -55,6 +56,7 @@ services:
       - email
       - excel
       - chat
+      - announcements
       - seq
     networks:
       - campus-network
@@ -180,5 +182,27 @@ services:
         condition: service_started
       email:
         condition: service_started
+    networks:
+      - campus-network
+
+
+  announcements:
+    build:
+      context: .
+      dockerfile: ./announcements/Dockerfile
+    ports:
+      - "8087:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=announcements
+      - GrpcServices__UsersService=http://users:8080
+      - GrpcServices__EmailService=http://email:8080 
+    depends_on:
+      - seq
+      - mongo
+      - users
+      - email
     networks:
       - campus-network

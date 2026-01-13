@@ -1,0 +1,30 @@
+syntax = "proto3";
+import "Protos/common.proto";
+option csharp_namespace = "announcementsServiceClient";
+package announcementsService;
+
+service announcementsService
+{ 
+    rpc CreateAnnouncement (CreateAnnouncementRequest) returns (commons.protos.MessageResponse);
+    rpc EditAnnouncement (EditAnnouncementRequest) returns (commons.protos.MessageResponse);
+    rpc DeleteAnnouncement (DeleteAnnouncementRequest) returns (commons.protos.MessageResponse);
+}
+
+message CreateAnnouncementRequest
+{
+    string title = 1;
+    string message = 2;
+    string author = 3; 
+}
+
+message EditAnnouncementRequest
+{
+    string id = 1;
+    string newTitle = 2;
+    string newMessage = 3;
+}
+
+message DeleteAnnouncementRequest
+{
+    string id = 1;
+}
