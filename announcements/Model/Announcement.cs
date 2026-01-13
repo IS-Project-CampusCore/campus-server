@@ -5,9 +5,9 @@ namespace Announcements.Model;
 [CollectionName("Announcements")]
 public record Announcement : DatabaseModel
 {
-    public string Title { get; set; } = default!;
-    public string Message { get; set; } = default!;
-    public string Author { get; set; } = default!;
-    public DateTime CreatedAt { get; set; }
-    public DateTime LastEditedAt { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
+    public string Author { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime LastEditedAt { get; set; } = DateTime.UtcNow;
 }

@@ -15,6 +15,7 @@ public class EditAnnouncement(ILogger<EditAnnouncement> logger) : CampusEndpoint
     {
         Post("api/announcements/edit");
         Policies(CampusPolicy.AuthenticatedUser);
+        Roles("management");
     }
 
     public override async Task HandleAsync(EditAnnouncementApiRequest req, CancellationToken cancellationToken)

@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Text.Json;
 
 Console.Title = "Campus SignalR Tester (Internal Tool)";
-var hubUrl = "http://localhost:8081/hubs/chat";
+var hubUrl = "http://10.172.46.35:8081/hubs/chat";
 
 Console.ForegroundColor = ConsoleColor.Cyan;
 Console.WriteLine("╔════════════════════════════════════════════════════╗");

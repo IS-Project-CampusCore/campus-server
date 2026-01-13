@@ -15,6 +15,7 @@ public class DeleteAnnouncement(ILogger<DeleteAnnouncement> logger) : CampusEndp
     {
         Delete("api/announcements/{Id}"); 
         Policies(CampusPolicy.AuthenticatedUser);
+        Roles("management");
     }
 
     public override async Task HandleAsync(DeleteAnnouncementApiRequest req, CancellationToken cancellationToken)

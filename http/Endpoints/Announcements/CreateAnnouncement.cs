@@ -14,7 +14,8 @@ public class CreateAnnouncement(ILogger<CreateAnnouncement> logger) : CampusEndp
     public override void Configure()
     {
         Post("api/announcements/create");
-        Policies(CampusPolicy.AuthenticatedUser); 
+        Policies(CampusPolicy.AuthenticatedUser);
+        Roles("management");
     }
 
     public override async Task HandleAsync(CreateAnnouncementApiRequest req, CancellationToken cancellationToken)

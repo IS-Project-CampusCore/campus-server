@@ -56,7 +56,7 @@ services:
       - email
       - excel
       - chat
-      - announcements 
+      - announcements
       - seq
     networks:
       - campus-network
@@ -191,7 +191,7 @@ services:
       context: .
       dockerfile: ./announcements/Dockerfile
     ports:
-      - "8084:8080"
+      - "8087:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - Logging__SeqUrl=http://seq
@@ -204,3 +204,5 @@ services:
       - mongo
       - users
       - email
+    networks:
+      - campus-network

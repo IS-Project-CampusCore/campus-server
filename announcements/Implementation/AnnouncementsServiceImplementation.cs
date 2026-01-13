@@ -13,14 +13,15 @@ namespace announcements.Implementation;
 
 public class AnnouncementServiceImplementation(
     ILogger<AnnouncementServiceImplementation> logger,
-    IDatabase database,
-    IConfiguration config)
+    emailService.emailServiceClient emailService,
+    usersService.usersServiceClient usersService,
+    IDatabase database)
 {
     private readonly ILogger<AnnouncementServiceImplementation> _logger = logger;
     private readonly AsyncLazy<IDatabaseCollection<Announcement>> _announcements = new(() => GetCollection(database));
 
-    private readonly string _userServiceUrl = config["Microservices:Users"] ?? "http://users:8080";
-    private readonly string _emailServiceUrl = config["Microservices:Email"] ?? "http://email:8080";
+    private readonly emailService.emailServiceClient _emailService = emailService;
+    private readonly usersService.usersServiceClient _usersService = usersService;
 
     public async Task<Announcement> CreateAsync(CreateAnnouncementRequest request)
     {
@@ -37,7 +38,7 @@ public class AnnouncementServiceImplementation(
 
         await collection.InsertAsync(announcement);
 
-        _ = NotifyAllUsers("New Announcement: " + request.Title, request.Message);
+        await NotifyAllUsers("New Announcement: " + request.Title, request.Message);
 
         return announcement;
     }
@@ -58,7 +59,7 @@ public class AnnouncementServiceImplementation(
 
         await collection.ReplaceAsync(announcement);
 
-        _ = NotifyAllUsers("Updated Announcement: " + request.NewTitle, request.NewMessage);
+        await NotifyAllUsers("Updated Announcement: " + request.NewTitle, request.NewMessage);
 
         return announcement;
     }
@@ -84,9 +85,6 @@ public class AnnouncementServiceImplementation(
             var users = await FetchAllUsers();
             if (users is null || users.Count == 0) return;
 
-            using var channel = GrpcChannel.ForAddress(_emailServiceUrl);
-            var client = new emailService.emailServiceClient(channel);
-
             foreach (var user in users)
             {
                 if (string.IsNullOrEmpty(user.Email)) continue;
@@ -101,7 +99,7 @@ public class AnnouncementServiceImplementation(
 
                 try
                 {
-                    await client.SendEmailAsync(emailReq);
+                    await _emailService.SendEmailAsync(emailReq);
                 }
                 catch (Exception ex)
                 {
@@ -117,10 +115,7 @@ public class AnnouncementServiceImplementation(
 
     private async Task<List<UserDto>?> FetchAllUsers()
     {
-        using var channel = GrpcChannel.ForAddress(_userServiceUrl);
-        var client = new usersService.usersServiceClient(channel);
-
-        var response = await client.GetAllUsersAsync(new GetAllUsersRequest { Placeholder = "" });
+        var response = await _usersService.GetAllUsersAsync(new GetAllUsersRequest { Placeholder = "" });
 
         if (!response.Success || string.IsNullOrEmpty(response.Body))
         {

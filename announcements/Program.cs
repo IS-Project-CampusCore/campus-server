@@ -2,6 +2,8 @@ using announcements;
 using announcements.Implementation;
 using commons.Database;
 using commons.RequestBase;
+using emailServiceClient;
+using usersServiceClient;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
@@ -27,6 +29,18 @@ string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
 string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
 
 builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
+
+builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:EmailService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:UsersService"];
+    o.Address = new Uri(address!);
+});
 
 builder.Services.AddMediatR(cfg =>
 {
