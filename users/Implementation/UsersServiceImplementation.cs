@@ -47,6 +47,7 @@ public class UsersServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
 
+    private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "double?", "double?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
     {
         var db = await _usersCollection;
@@ -280,14 +281,13 @@ public class UsersServiceImplementation(
             FileName = fileName
         };
 
-        request.CellTypes.Add("String");
-        request.CellTypes.Add("String");
-        request.CellTypes.Add("String");
+        request.CellTypes.AddRange(s_registerParametersType);
 
         var response = await _excelService.ParseExcelAsync(request);
 
         if (!response.Success) throw new InternalErrorException(response.Errors);
-        if (string.IsNullOrEmpty(response.Body)) throw new BadRequestException("Empty excel file");
+        if (string.IsNullOrEmpty(response.Body)) 
+            throw new BadRequestException("Empty excel file");
 
         ExcelData data = response.GetPayload<ExcelData>()!;
 
