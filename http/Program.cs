@@ -1,3 +1,4 @@
+using announcementsServiceClient;
 using chatServiceClient;
 using excelServiceClient;
 using FastEndpoints;
@@ -53,6 +54,11 @@ builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
+builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:AnnouncementsService"];
+    o.Address = new Uri(address!);
+});
 
 builder.Services.AddAuthentication(options =>
 {

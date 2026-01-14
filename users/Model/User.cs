@@ -16,7 +16,7 @@ public record User : DatabaseModel
     [BsonRepresentation(BsonType.String)]
     public required UserType Role { get; set; } = UserType.GUEST;
 
-    public bool IsVerified { get; set; } = false;
+    public bool IsVerified { get; set; } = false; 
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime LastLoginAt { get; set; } = DateTime.UtcNow;

@@ -29,6 +29,8 @@ public interface IUsersServiceImplementation
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
+
+    Task<List<User>> GetAllUsers();
 }
 
 public class UsersServiceImplementation(
@@ -46,6 +48,12 @@ public class UsersServiceImplementation(
 
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
+
+    public async Task<List<User>> GetAllUsers()
+    {
+        var db = await _usersCollection;
+        return await db.MongoCollection.Find(_ => true).ToListAsync();
+    }
 
     private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "double?", "double?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
@@ -134,6 +142,7 @@ public class UsersServiceImplementation(
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
     }
+
     public async Task DeleteAccount(string userId)
     {
         if (string.IsNullOrWhiteSpace(userId))
@@ -154,7 +163,6 @@ public class UsersServiceImplementation(
 
         _logger.LogInformation($"User with ID:{userId} has been deleted.");
     }
-
 
     public async Task<UserWithJwt> Verify(string email, string password, string verifyCode)
     {
@@ -207,6 +215,7 @@ public class UsersServiceImplementation(
             throw new InternalErrorException(ex.Message);
         }
     }
+
     public async Task ResendVerifyCode(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
@@ -315,11 +324,13 @@ public class UsersServiceImplementation(
         }
         return users;
     }
+
     private async Task<User?> FindByEmailOrDefault(string email)
     {
         var db = await _usersCollection;
         return await db.GetOneAsync(x => x.Email == email);
     }
+
     public async Task ResetPassword(string email)
     {
         var db = await _usersCollection;
@@ -434,6 +445,7 @@ public class UsersServiceImplementation(
     }
 
     private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
+
     private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
 
     private string GenerateJwtToken(string userId, string userEmail, string userName, UserType role)
