@@ -167,7 +167,7 @@ public class ExcelServiceImplementation(
                             rowValues.Add(null);
                             continue;
                         }
-                        result.Errors.Add($"[Excell Error] Empty cell at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        result.Errors.Add($"[Excel Error] Empty cell at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
                     }
                     else if (cell.Value.IsNumber)
                     {
@@ -208,14 +208,14 @@ public class ExcelServiceImplementation(
                     {
                         if (excelCell.CellType != types[cell.Address.ColumnNumber - 1] && $"{excelCell.CellType}?" != types[cell.Address.ColumnNumber - 1])
                         {
-                            result.Errors.Add($"[Excell Error] Type mismatch at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}. Expected:{types[cell.Address.ColumnNumber - 1]}, Found:{excelCell.CellType}");
+                            result.Errors.Add($"[Excel Error] Type mismatch at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}. Expected:{types[cell.Address.ColumnNumber - 1]}, Found:{excelCell.CellType}");
                         }
                         rowValues.Add(excelCell);
                     }
                     else
                     {
-                        result.Errors.Add($"[Excell Error] Unsupported cell type at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
-                        rowValues.Add(new ExcelCell("Blank", null));
+                        result.Errors.Add($"[Excel Error] Unsupported cell type at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        rowValues.Add(null);
                     }
                 }
                 result.Rows.Add(rowValues);

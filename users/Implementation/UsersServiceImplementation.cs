@@ -51,19 +51,24 @@ public class UsersServiceImplementation(
 
     public async Task<List<User>> GetAllUsers()
     {
-        var db = await _usersCollection;
-        return await db.MongoCollection.Find(_ => true).ToListAsync();
+        var users = await _usersCollection;
+        return await users.MongoCollection.Find(_ => true).ToListAsync();
     }
 
     private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "double?", "double?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
     {
-        var db = await _usersCollection;
-        return await db.GetOneByIdAsync(id);
+        var users = await _usersCollection;
+        return await users.GetOneByIdAsync(id);
     }
 
     public async Task<UserWithJwt> AuthUser(string email, string password)
     {
+        if (!IsValidEmail(email) || !IsValidPassword(password))
+        {
+            throw new BadRequestException("Email or password incorrect");
+        }
+
         User? user = await FindByEmailOrDefault(email);
 
         if (user is null || !VerifyPassword(password, user.PasswordHash))
@@ -85,59 +90,31 @@ public class UsersServiceImplementation(
         return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Name, user.Role));
     }
 
-    public async Task<User?> RegisterUser(string email, string name, UserType role)
+    public async Task<User?> RegisterUser(string email, string name, UserType role) 
+        => await RegisterUser(new User { Email =  email, Name = name, Role = role });
+    private async Task<User?> RegisterUser(User newUser)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (!IsValidEmail(newUser.Email))
         {
-            throw new BadRequestException("Email cannot be empty.");
+            throw new BadRequestException("Invalid email address");
         }
 
-        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-        if (!Regex.IsMatch(email, emailPattern))
+        var users = await _usersCollection;
+
+        if (await users.ExistsAsync(u => u.Email == newUser.Email))
         {
-            throw new BadRequestException("Please enter a valid email address.");
+            _logger.LogError($"Email:{newUser.Email} is already used");
+            throw new BadRequestException($"Email:{newUser.Email} is already used");
         }
 
-        var db = await _usersCollection;
+        await users.InsertAsync(newUser);
 
-        if (await db.ExistsAsync(u => u.Email == email))
-        {
-            _logger.LogError($"Email:{email} is already used");
-            throw new BadRequestException($"Email:{email} is already used");
-        }
+        string verifyCode = GenerateVerifyCode();
+        _logger.LogInformation($"Verify Code:{verifyCode} generated for email: {newUser.Email}");
 
-        User newUser = new User
-        {
-            Email = email,
-            Name = name,
-            Role = role,
-            IsVerified = false,
-            CreatedAt = DateTime.UtcNow
-        };
+        await StoreVerifyCode(newUser.Id, verifyCode);
 
-        await db.InsertAsync(newUser);
-
-        int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-        var verfyCode = verifyCodeNumber.ToString("D4");
-
-        _logger.LogInformation($"Verify Code:{verfyCode} generated for email: {email}");
-
-        await StoreVerifyCode(newUser.Id, verfyCode);
-
-        string templateDataString = JsonSerializer.Serialize(new { Name = name, Code = verfyCode });
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = email,
-            ToName = name,
-            TemplateName = "Welcome",
-            TemplateData = templateDataString
-        });
-
-        if (!response.Success)
-        {
-            _logger.LogError($"SendEmail has failed with Code:{response.Code} and Error:{response.Errors}");
-            throw new InternalErrorException(response.Errors);
-        }
+        await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
 
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
@@ -166,10 +143,9 @@ public class UsersServiceImplementation(
 
     public async Task<UserWithJwt> Verify(string email, string password, string verifyCode)
     {
-        string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
-        if (string.IsNullOrWhiteSpace(password) || !Regex.IsMatch(password, passwordPattern))
+        if (!IsValidEmail(email) || !IsValidPassword(password))
         {
-            throw new BadRequestException("Password does not meet security requirements.");
+            throw new BadRequestException("Email or password incorrect");
         }
 
         User? user = await FindByEmailOrDefault(email);
@@ -218,15 +194,9 @@ public class UsersServiceImplementation(
 
     public async Task ResendVerifyCode(string email)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (!IsValidEmail(email))
         {
-            throw new BadRequestException("Email cannot be empty.");
-        }
-
-        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-        if (!Regex.IsMatch(email, emailPattern))
-        {
-            throw new BadRequestException("Please enter a valid email address.");
+            throw new BadRequestException("Invalid email address");
         }
 
         User? user = await FindByEmailOrDefault(email);
@@ -253,32 +223,18 @@ public class UsersServiceImplementation(
             {
                 throw new InternalErrorException("System indicates code exists but none found.");
             }
+
             codeToSend = existingCode;
             _logger.LogInformation($"Resending existing code for User:{email}");
         }
         else
         {
-            int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-            codeToSend = verifyCodeNumber.ToString("D4");
+            codeToSend = GenerateVerifyCode();
             await StoreVerifyCode(user.Id, codeToSend);
             _logger.LogInformation($"Generated new code for User:{email} as none existed.");
         }
 
-        string templateDataString = JsonSerializer.Serialize(new { Name = user.Name, Code = codeToSend });
-
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = user.Email,
-            ToName = user.Name,
-            TemplateName = "Welcome",
-            TemplateData = templateDataString
-        });
-
-        if (!response.Success)
-        {
-            _logger.LogError($"Resend email failed with Code:{response.Code} and Error:{response.Errors}");
-            throw new InternalErrorException(response.Errors);
-        }
+        await SendVerifyEmail(user.Email, user.Name, codeToSend);
     }
 
     public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
@@ -294,41 +250,45 @@ public class UsersServiceImplementation(
 
         var response = await _excelService.ParseExcelAsync(request);
 
-        if (!response.Success) throw new InternalErrorException(response.Errors);
+        if (!response.Success)
+            throw new InternalErrorException(response.Errors);
+
         if (string.IsNullOrEmpty(response.Body)) 
             throw new BadRequestException("Empty excel file");
 
-        ExcelData data = response.GetPayload<ExcelData>()!;
+        var payload = response.Payload;
+        IEnumerable<string>? errors = payload.TryGetArray("Errors")?.IterateStrings();
 
-        if (data.Errors != null && data.Errors.Count > 0)
+        if (errors is not null && errors.Any())
         {
-            string aggregatedErrors = string.Join("\n", data.Errors);
-            _logger.LogError($"Excel parsing failed with {data.Errors.Count} errors for file {fileName}");
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
             throw new BadRequestException(aggregatedErrors);
         }
 
-        List<RegisterRequest> requests = ExcelToRegisterRequest.ConvertToRegisterRequest(data);
+        ExcelData? data = response.GetPayload<ExcelData>();
+        if (data is null)
+        {
+            _logger.LogError("Excel data was corrupted");
+            throw new InternalErrorException("Corrupted excel data");
+        }    
 
-        List<User?> users = [];
-        foreach (var req in requests)
+        List<User> users = ExcelToUserModels.ConvertToUserModels(data);
+
+        List<User?> registeredUsers = [];
+        foreach (var user in users)
         {
             try
             {
-                User? newUser = await RegisterUser(req.Email, req.Name, User.StringToRole(req.Role));
-                users.Add(newUser);
+                User? newUser = await RegisterUser(user);
+                registeredUsers.Add(newUser);
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Request(Email:{req.Email}) exit with Error:{ex.Message}");
+                _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
             }
         }
-        return users;
-    }
-
-    private async Task<User?> FindByEmailOrDefault(string email)
-    {
-        var db = await _usersCollection;
-        return await db.GetOneAsync(x => x.Email == email);
+        return registeredUsers;
     }
 
     public async Task ResetPassword(string email)
@@ -342,27 +302,32 @@ public class UsersServiceImplementation(
             throw new BadRequestException($"User with email {email} does not exist.");
         }
         await db.UpdateAsync(u => u.Email == email, u => u.IsVerified, false);
-        int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-        var verfyCode = verifyCodeNumber.ToString("D4");
 
-        _logger.LogInformation($"Reset Password Code:{verfyCode} generated for email: {email}");
+        string verfiyCode = GenerateVerifyCode();
+        _logger.LogInformation($"Reset Password Code:{verfiyCode} generated for email: {email}");
 
-        await StoreVerifyCode(user.Id, verfyCode);
+        await StoreVerifyCode(user.Id, verfiyCode);
 
-        string templateDataString = JsonSerializer.Serialize(new { Name = user.Name, Code = verfyCode });
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = email,
-            ToName = user.Name,
-            TemplateName = "Welcome", 
-            TemplateData = templateDataString
-        });
+        await SendVerifyEmail(user.Email, user.Name, verfiyCode);
+    }
 
-        if (!response.Success)
-        {
-            _logger.LogError($"SendEmail failed: {response.Errors}");
-            throw new InternalErrorException("Could not send reset email.");
-        }
+    private bool IsValidEmail(string email)
+    {
+
+        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return !string.IsNullOrEmpty(email) && Regex.IsMatch(email, emailPattern);
+    }
+
+    private bool IsValidPassword(string password)
+    {
+        string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
+        return !string.IsNullOrEmpty(password) && Regex.IsMatch(password, passwordPattern);
+    }
+
+    private async Task<User?> FindByEmailOrDefault(string email)
+    {
+        var db = await _usersCollection;
+        return await db.GetOneAsync(x => x.Email == email);
     }
 
     private async Task<User> UpdateUser(User userToUpdate)
@@ -376,6 +341,8 @@ public class UsersServiceImplementation(
         return userToUpdate;
     }
 
+    private string GenerateVerifyCode() => RandomNumberGenerator.GetInt32(0, 10000).ToString("D4");
+
     private async Task StoreVerifyCode(string userId, string code)
     {
         var db = await _verifyCollection;
@@ -383,7 +350,8 @@ public class UsersServiceImplementation(
         if (await db.ExistsAsync(v => v.UserId == userId))
         {
             var existing = await db.GetOneAsync(v => v.UserId == userId);
-            if (existing != null) await db.DeleteWithIdAsync(existing.Id);
+            if (existing is not null) 
+                await db.DeleteWithIdAsync(existing.Id);
         }
 
         var verifyEntry = new VerifyCode
@@ -394,6 +362,12 @@ public class UsersServiceImplementation(
         };
 
         await db.InsertAsync(verifyEntry);
+    }
+
+    private async Task<bool> HasVerifyCode(string userId)
+    {
+        var db = await _verifyCollection;
+        return await db.ExistsAsync(v => v.UserId == userId);
     }
 
     private async Task<string?> GetVerificationCode(string userId)
@@ -413,35 +387,22 @@ public class UsersServiceImplementation(
         }
     }
 
-    private async Task<bool> HasVerifyCode(string userId)
+    private async Task SendVerifyEmail(string email, string name, string code)
     {
-        var db = await _verifyCollection;
-        return await db.ExistsAsync(v => v.UserId == userId);
-    }
+        string templateDataString = JsonSerializer.Serialize(new { Name = name, Code = code });
+        var response = await _emailService.SendEmailAsync(new SendEmailRequest
+        {
+            ToEmail = email,
+            ToName = name,
+            TemplateName = "Welcome",
+            TemplateData = templateDataString
+        });
 
-    internal static async Task<IDatabaseCollection<User>> GetUserCollection(IDatabase database)
-    {
-        var collection = database.GetCollection<User>();
-        var roleIndex = Builders<User>.IndexKeys.Ascending(u => u.Role);
-        var emailIndex = Builders<User>.IndexKeys.Ascending(u => u.Email);
-
-        await collection.MongoCollection.Indexes.CreateManyAsync([
-            new CreateIndexModel<User>(roleIndex, new CreateIndexOptions { Name = "UserRoleIndex" }),
-            new CreateIndexModel<User>(emailIndex, new CreateIndexOptions { Name = "UserEmailIndex", Unique = true })
-        ]);
-        return collection;
-    }
-
-    internal static async Task<IDatabaseCollection<VerifyCode>> GetVerifyCollection(IDatabase database)
-    {
-        var collection = database.GetCollection<VerifyCode>();
-        var userIndex = Builders<VerifyCode>.IndexKeys.Ascending(v => v.UserId);
-
-        await collection.MongoCollection.Indexes.CreateOneAsync(
-            new CreateIndexModel<VerifyCode>(userIndex, new CreateIndexOptions { Name = "VerifyUserIdIndex" })
-        );
-
-        return collection;
+        if (!response.Success)
+        {
+            _logger.LogError($"SendEmail failed: {response.Errors}");
+            throw new InternalErrorException("Could not send reset email.");
+        }
     }
 
     private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
@@ -467,5 +428,30 @@ public class UsersServiceImplementation(
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
         };
         return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
+    }
+
+    internal static async Task<IDatabaseCollection<User>> GetUserCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<User>();
+        var roleIndex = Builders<User>.IndexKeys.Ascending(u => u.Role);
+        var emailIndex = Builders<User>.IndexKeys.Ascending(u => u.Email);
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([
+            new CreateIndexModel<User>(roleIndex, new CreateIndexOptions { Name = "UserRoleIndex" }),
+            new CreateIndexModel<User>(emailIndex, new CreateIndexOptions { Name = "UserEmailIndex", Unique = true })
+        ]);
+        return collection;
+    }
+
+    internal static async Task<IDatabaseCollection<VerifyCode>> GetVerifyCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<VerifyCode>();
+        var userIndex = Builders<VerifyCode>.IndexKeys.Ascending(v => v.UserId);
+
+        await collection.MongoCollection.Indexes.CreateOneAsync(
+            new CreateIndexModel<VerifyCode>(userIndex, new CreateIndexOptions { Name = "VerifyUserIdIndex" })
+        );
+
+        return collection;
     }
 }
