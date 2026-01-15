@@ -25,7 +25,7 @@ public interface IUsersServiceImplementation
     public Task<User?> RegisterUser(string email, string name, UserType role);
     public Task<UserWithJwt> AuthUser(string email, string password);
     public Task<UserWithJwt> Verify(string email, string password, string verifyCode);
-    public Task<List<User?>> RegisterUsersFromExcel(string fileName);
+    public Task<BulkRegisterResponse> BulkRegisterAsync(string fileName);
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
@@ -55,7 +55,7 @@ public class UsersServiceImplementation(
         return await users.MongoCollection.Find(_ => true).ToListAsync();
     }
 
-    private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "double?", "double?", "string?", "string?" };
+    private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
     {
         var users = await _usersCollection;
@@ -114,7 +114,7 @@ public class UsersServiceImplementation(
 
         await StoreVerifyCode(newUser.Id, verifyCode);
 
-        await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
+        //await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
 
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
@@ -237,7 +237,7 @@ public class UsersServiceImplementation(
         await SendVerifyEmail(user.Email, user.Name, codeToSend);
     }
 
-    public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
+    public async Task<BulkRegisterResponse> BulkRegisterAsync(string fileName)
     {
         if (fileName is null) throw new BadRequestException("No file selected");
 
@@ -271,24 +271,53 @@ public class UsersServiceImplementation(
         {
             _logger.LogError("Excel data was corrupted");
             throw new InternalErrorException("Corrupted excel data");
-        }    
+        }
 
-        List<User> users = ExcelToUserModels.ConvertToUserModels(data);
+        List<User> users;
+        try
+        {
+           (users, errors) = ExcelToUserModels.ConvertToUserModels(data);
+        }
+        catch (ServiceMessageException ex)
+        {
+            _logger.LogError(ex, $"Convert to User model failed with Exception:{ex.GetType().Name}, Msg:{ex.Message}");
+            throw new BadRequestException(ex.Message);
+        }
 
-        List<User?> registeredUsers = [];
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        int total = users.Count;
+        int registered = 0;
+        int skiped = 0;
+        List<RegisterResult> results = [];
+
         foreach (var user in users)
         {
             try
             {
                 User? newUser = await RegisterUser(user);
-                registeredUsers.Add(newUser);
+                results.Add(new RegisterResult(newUser!.Email));
+                registered++;
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
+                results.Add(new RegisterResult(user.Email, ex.Message));
+                skiped++;
             }
         }
-        return registeredUsers;
+        return new BulkRegisterResponse
+        {
+            TotalCount = total,
+            RegisteredCount = registered,
+            SkipedCount = skiped,
+            Results = results
+        };
     }
 
     public async Task ResetPassword(string email)

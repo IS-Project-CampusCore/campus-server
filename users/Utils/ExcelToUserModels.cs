@@ -1,22 +1,21 @@
 ﻿using commons.RequestBase;
-using MassTransit.NewIdProviders;
 using MassTransit.Util;
 using users.Model;
-using usersServiceClient;
 
 namespace users.Utils;
 
 public static class ExcelToUserModels
 {
-    private static readonly string[] s_excelHeader = { "Email", "Name", "Role", "University", "Year", "Group", "Major", "Dormitory", "Room", "Department", "Title" };
+    private static readonly string[] s_excelHeader = { "Email", "Name", "Role", "University", "Year", "Group", "Major", "Department", "Title" };
 
-    public static List<User> ConvertToUserModels(ExcelData excelData)
+    public static (List<User>, List<string>) ConvertToUserModels(ExcelData excelData)
     {
         var users = new List<User>();
+        var errors = new List<string>();
 
         if (excelData.Headers.Except(s_excelHeader).Any())
         {
-            throw new BadRequestException("[Excel Error] Excel file is missing required columns (Name, Email, or Role).");
+            throw new BadRequestException($"[Excel Error] Excel file is missing required columns.");
         }
 
         var headerMap = excelData.Headers
@@ -25,9 +24,25 @@ public static class ExcelToUserModels
 
         foreach (var row in excelData.Rows)
         {
-            string emailValue = GetStringFromCell(row, headerMap["Email"]) ?? throw new BadRequestException("Email field missing");
-            string nameValue = GetStringFromCell(row, headerMap["Name"]) ?? throw new BadRequestException("Name field missing");
-            string roleString = GetStringFromCell(row, headerMap["Role"]) ?? throw new BadRequestException("Role field missing");
+            int rowNr = excelData.Rows.IndexOf(row) + 1;
+
+            if (!TryStringFromCell(row, headerMap["Email"], out string emailValue))
+            {
+                errors.Add(FieldError("Email", rowNr, headerMap["Email"] + 1));
+            }
+
+            if (!TryStringFromCell(row, headerMap["Name"], out string nameValue))
+            {
+                errors.Add(FieldError("Name", rowNr, headerMap["Name"] + 1));
+            }
+
+            if (!TryStringFromCell(row, headerMap["Role"], out string roleString))
+            {
+                errors.Add(FieldError("Role", rowNr, headerMap["Role"] + 1));
+            }
+
+            if (string.IsNullOrEmpty(emailValue) || string.IsNullOrEmpty(nameValue) || string.IsNullOrEmpty(roleString))
+                continue;
 
             UserType role = User.StringToRole(roleString);
 
@@ -35,68 +50,134 @@ public static class ExcelToUserModels
 
             try
             {
-                newUser = role switch
+                switch (role)
                 {
-                    UserType.CAMPUS_STUDENT => new CampusStudent
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                        University = GetStringFromCell(row, headerMap["University"]) ?? throw new BadRequestException("'University' field is mising for Campus Student"),
-                        Year = GetIntFromCell(row, headerMap["Year"]) ?? throw new BadRequestException("'Year' field is mising for Campus Student"),
-                        Group = GetIntFromCell(row, headerMap["Group"]) ?? throw new BadRequestException("'Group' field is mising for Campus Student"),
-                        Major = GetStringFromCell(row, headerMap["Major"]) ?? throw new BadRequestException("'Major' field is mising for Campus Student"),
-                        Dormitory = GetStringFromCell(row, headerMap["Dormitory"]) ?? throw new BadRequestException("'Dormitory' field is mising for Campus Student"),
-                        Room = GetIntFromCell(row, headerMap["Room"]) ?? throw new BadRequestException("'Room' field is mising for Campus Student")
-                    },
+                    case UserType.CAMPUS_STUDENT:
+                        if (!TryStringFromCell(row, headerMap["University"], out string university))
+                        {
+                            errors.Add(FieldError("University", rowNr, headerMap["University"] + 1));
+                        }
+                        if (!TryIntFromCell(row, headerMap["Year"], out int year))
+                        {
+                            errors.Add(FieldError("Year", rowNr, headerMap["Year"] + 1));
+                        }
+                        if (!TryIntFromCell(row, headerMap["Group"], out int group))
+                        {
+                            errors.Add(FieldError("Group", rowNr, headerMap["Group"] + 1));
+                        }
+                        if (!TryStringFromCell(row, headerMap["Major"], out string major))
+                        {
+                            errors.Add(FieldError("Major", rowNr, headerMap["Major"] + 1));
+                        }
 
-                    UserType.STUDENT => new Student
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                        University = GetStringFromCell(row, headerMap["University"]) ?? throw new BadRequestException("'University' field is mising for Student"),
-                        Year = GetIntFromCell(row, headerMap["Year"]) ?? throw new BadRequestException("'Year' field is mising for Student"),
-                        Group = GetIntFromCell(row, headerMap["Group"]) ?? throw new BadRequestException("'Group' field is mising for Student"),
-                        Major = GetStringFromCell(row, headerMap["Major"]) ?? throw new BadRequestException("'Major' field is mising for Student")
-                    },
+                        if (string.IsNullOrEmpty(university) || string.IsNullOrEmpty(major) || group == 0 || year == 0)
+                            continue;
 
-                    UserType.PROFESSOR => new Professor
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                        University = GetStringFromCell(row, headerMap["University"]) ?? throw new BadRequestException("'University' field is mising for Professor"),
-                        Subjects = [],
-                        Department = GetStringFromCell(row, headerMap["Department"]) ?? throw new BadRequestException("'Department' field is mising for Professor"),
-                        Title = GetStringFromCell(row, headerMap["Title"]) ?? throw new BadRequestException("'Title' field is mising for Professor")
-                    },
+                        newUser = new CampusStudent
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role,
+                            University = university,
+                            Year = year,
+                            Group = group,
+                            Major = major
+                        };
+                        users.Add(newUser);
+                        break;
+                    case UserType.STUDENT:
+                        if (!TryStringFromCell(row, headerMap["University"], out university))
+                        {
+                            errors.Add(FieldError("University", rowNr, headerMap["University"] + 1));
+                        }
+                        if (!TryIntFromCell(row, headerMap["Year"], out year))
+                        {
+                            errors.Add(FieldError("Year", rowNr, headerMap["Year"] + 1));
+                        }
+                        if (!TryIntFromCell(row, headerMap["Group"], out group))
+                        {
+                            errors.Add(FieldError("Group", rowNr, headerMap["Group"] + 1));
+                        }
+                        if (!TryStringFromCell(row, headerMap["Major"], out major))
+                        {
+                            errors.Add(FieldError("Major", rowNr, headerMap["Major"] + 1));
+                        }
 
-                    UserType.MANAGEMENT => new Management
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                    },
+                        if (string.IsNullOrEmpty(university) || string.IsNullOrEmpty(major) || group == 0 || year == 0)
+                            continue;
 
-                    UserType.ADMIN => new Admin
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                    },
+                        newUser = new Student
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role,
+                            University = university,
+                            Year = year,
+                            Group = group,
+                            Major = major
+                        };
+                        users.Add(newUser);
+                        break;
+                    case UserType.PROFESSOR:
+                        if (!TryStringFromCell(row, headerMap["University"], out university))
+                        {
+                            errors.Add(FieldError("University", rowNr, headerMap["University"] + 1));
+                        }
+                        if (!TryStringFromCell(row, headerMap["Department"], out string department))
+                        {
+                            errors.Add(FieldError("Department", rowNr, headerMap["Department"] + 1));
+                        }
+                        if (!TryStringFromCell(row, headerMap["Title"], out string title))
+                        {
+                            errors.Add(FieldError("Title", rowNr, headerMap["Title"] + 1));
+                        }
 
-                    UserType.GUEST => new User
-                    {
-                        Email = emailValue,
-                        Name = nameValue,
-                        Role = role,
-                    },
+                        if (string.IsNullOrEmpty(university) || string.IsNullOrEmpty(department) || string.IsNullOrEmpty(title))
+                            continue;
 
-                    _ => throw new BadRequestException("Unsuported role")
-                };
-
-                users.Add(newUser);
+                        newUser = new Professor
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role,
+                            University = university,
+                            Subjects = [],
+                            Department = department,
+                            Title = title
+                        };
+                        users.Add(newUser);
+                        break;
+                    case UserType.MANAGEMENT:
+                        newUser = new Management
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role
+                        };
+                        users.Add(newUser);
+                        break;
+                    case UserType.ADMIN:
+                        newUser = new Admin
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role
+                        };
+                        users.Add(newUser);
+                        break;
+                    case UserType.GUEST:
+                        newUser = new User
+                        {
+                            Email = emailValue,
+                            Name = nameValue,
+                            Role = role
+                        };
+                        users.Add(newUser);
+                        break;
+                    default:
+                        errors.Add($"[Bulk Register Error] Invalid role at row:{rowNr}, column:{headerMap["Role"] + 1}");
+                        break;
+                }
             }
             catch (Exception ex)
             {
@@ -104,17 +185,29 @@ public static class ExcelToUserModels
             }
         }
 
-        return users;
+        return (users, errors);
     }
 
-    private static string? GetStringFromCell(List<ExcelCell?> row, int col)
+    private static bool TryStringFromCell(List<ExcelCell?> row, int col, out string value)
     {
-        return row[col]?.Value?.ToString();
+        value = row[col]?.Value?.ToString() ?? string.Empty;
+        return !string.IsNullOrEmpty(value);
     }
 
-    private static int? GetIntFromCell(List<ExcelCell?> row, int col) {
+    private static bool TryIntFromCell(List<ExcelCell?> row, int col, out int value)
+    {
         if (int.TryParse(row[col]?.Value?.ToString(), out var result))
-            return result;
-        return null;
+        {
+            value = result;
+            return true;
+        }
+
+        value = 0;
+        return false;
+    }
+
+    private static string FieldError(string field, int row, int col)
+    {
+        return $"[Bulk Register Error] '{field}' field missing at row:{row}, column:{col}";
     }
 }

@@ -10,10 +10,10 @@ namespace users.Services;
 public class RegisterUserExcelMessage(
     ILogger<LoginMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<UsersExcelRequest, List<User?>>(logger)
+) : CampusMessage<UsersExcelRequest, BulkRegisterResponse>(logger)
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    protected override async Task<List<User?>> HandleMessage(UsersExcelRequest request, CancellationToken token) =>
-        await _implementation.RegisterUsersFromExcel(request.FileName);
+    protected override async Task<BulkRegisterResponse> HandleMessage(UsersExcelRequest request, CancellationToken token) =>
+        await _implementation.BulkRegisterAsync(request.FileName);
 }
