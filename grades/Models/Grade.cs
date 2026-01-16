@@ -2,7 +2,7 @@
 
 namespace grades.Models;
 
-[CollectionName("Course")]
+[CollectionName("Grades")]
 public record Grade : DatabaseModel
 {
     public string StudentId { get; set; } = string.Empty;

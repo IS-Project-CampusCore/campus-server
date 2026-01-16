@@ -38,13 +38,15 @@ message CreateCourseRequest
 message AddStudentRequest
 {
     string courseId = 1;
-    string studentId = 2;
+    string professorId = 2;
+    string studentId = 3;
 }
 
 message RemoveStudentRequest
 {
     string courseId = 1;
-    string studentId = 2;
+    string professorId = 2;
+    string studentId = 3;
 }
 
 message EnrollRequest
@@ -74,21 +76,24 @@ message GetCourseByNameRequest
 message AddGradeRequest
 {
     string courseId = 1;
-    string studentId = 2;
-    double grade = 3;
+    string professorId = 2;
+    string studentId = 3;
+    double grade = 4;
 }
 
 message UpdateGradeRequest
 {
     string courseId = 1;
-    string studentId = 2;
-    double grade = 3;
+    string professorId = 2;
+    string studentId = 3;
+    double grade = 4;
 }
 
 message RemoveGradeRequest
 {
     string courseId = 1;
-    string studentId = 2;
+    string professorId = 2;
+    string studentId = 3;
 }
 
 message GetGradesRequest

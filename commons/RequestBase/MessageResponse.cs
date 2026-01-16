@@ -155,6 +155,8 @@ public readonly struct MessageBody
     
     public readonly int Int32() => ValidateJsonOrThrow(JsonValueKind.Number).GetInt32();
 
+    public readonly double Double() => ValidateJsonOrThrow(JsonValueKind.Number).GetDouble();
+
     public readonly MessageBody Object() => new(ValidateJsonOrThrow(JsonValueKind.Object));
 
     public readonly MessageBody Array() => new(ValidateJsonOrThrow(JsonValueKind.Array));
@@ -171,6 +173,8 @@ public readonly struct MessageBody
     public readonly string? TryString() => Validate(JsonValueKind.String) ? _json.GetString() : null;
    
     public readonly int? TryInt32() => Validate(JsonValueKind.Number) ? _json.GetInt32() : null;
+
+    public readonly double? TryDouble() => Validate(JsonValueKind.Number) ? _json.GetDouble() : null;
 
     public readonly MessageBody? TryObj() => Validate(JsonValueKind.Object) ? new(_json) : null;
 
@@ -191,6 +195,9 @@ public readonly struct MessageBody
 
     public readonly int? TryGetInt32(string property) =>
         TryGetProperty(property, JsonValueKind.Number) is { } prop ? prop.GetInt32() : null;
+
+    public readonly double? TryGetDouble(string property) =>
+        TryGetProperty(property, JsonValueKind.Number) is { } prop ? prop.GetDouble() : null;
 
     public readonly MessageBody? TryGetObject(string property) => 
         TryGetProperty(property, JsonValueKind.Object) is { } prop ? new(prop) : null;
@@ -216,6 +223,8 @@ public readonly struct MessageBody
 
     public readonly int GetInt32(string property) =>
         GetPropertyAndValidate(property, JsonValueKind.Number).GetInt32();
+    public readonly double GetDouble(string property) =>
+        GetPropertyAndValidate(property, JsonValueKind.Number).GetDouble();
 
     public readonly MessageBody GetObject(string property) =>
     new(GetPropertyAndValidate(property, JsonValueKind.Object));

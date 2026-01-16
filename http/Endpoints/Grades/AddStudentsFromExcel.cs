@@ -6,13 +6,13 @@ namespace http.Endpoints.Grades;
 
 public record FileRequest(string CourseId, string FileName);
 
-public class AddStudentFromExcel(ILogger<AddStudentFromExcel> logger) : CampusEndpoint<FileRequest>(logger)
+public class AddStudentsFromExcel(ILogger<AddStudentsFromExcel> logger) : CampusEndpoint<FileRequest>(logger)
 {
     public gradesService.gradesServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
-        Post("api/grades/add-excel");
+        Post("api/grades/students-excel");
 
         Policies(CampusPolicy.AuthenticatedUser);
         Roles("professor");

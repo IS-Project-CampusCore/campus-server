@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Xml.Linq;
 using usersServiceClient;
+using static MassTransit.Logging.OperationName;
 
 namespace grades.Implementation;
 
@@ -15,15 +16,15 @@ public interface IGradesService
 {
     Task<Course> GetCourseByNameAsync(string courseName);
     Task<Course> CreateCourseAsync(string name, string professorId, int year);
-    Task AddStudentAsync(string courseId, string studentId);
-    Task RemoveStudentAsync(string courseId, string studentId);
+    Task AddStudentAsync(string courseId, string professorId, string studentId, bool hasKey = false);
+    Task RemoveStudentAsync(string courseId, string professorId, string studentId);
     Task EnrollToCourseAsync(string courseKey, string studentId);
 
     Task<List<Course>> GetUserCoursesAsync(string userId, bool isProfessor);
     Task<List<Grade>> GetGradesAsync(string studentId);
-    Task<Grade> AddGradeAsync(string courseId, string studentId, double value);
-    Task<Grade> UpdateGradeAsync(string courseId, string studentId, double value);
-    Task RemoveGradeAsync(string courseId, string studentId);
+    Task<Grade> AddGradeAsync(string courseId, string professorId, string studentId, double value);
+    Task<Grade> UpdateGradeAsync(string courseId, string professorId, string studentId, double value);
+    Task RemoveGradeAsync(string courseId, string professorId, string studentId);
 }
 
 public class GradesServiceImplementation(
@@ -90,16 +91,16 @@ public class GradesServiceImplementation(
         return course;
     }
 
-    public async Task AddStudentAsync(string courseId, string studentId)
+    public async Task AddStudentAsync(string courseId, string professorId, string studentId, bool hasKey = false)
     {
         var courses = await _courses;
 
-        var course = await courses.GetOneByIdAsync(courseId);
-        if (course is null)
+        if (!hasKey && !await IsCourseProfessorOrThrow(courseId, professorId))
         {
-            _logger.LogInformation($"Course:{courseId} was not found");
-            throw new NotFoundException("Course not found");
+            throw new ForbiddenException("Just the course professor has access to this course");
         }
+
+        var course = await courses.GetOneByIdAsync(courseId);
 
         if (course.StudentIds.Contains(studentId))
         {
@@ -128,22 +129,24 @@ public class GradesServiceImplementation(
         await courses.ReplaceAsync(course);
     }
 
-    public async Task RemoveStudentAsync(string courseId, string studentId)
+    public async Task RemoveStudentAsync(string courseId, string professorId, string studentId)
     {
         var courses = await _courses;
 
-        var course = await courses.GetOneByIdAsync(courseId);
-        if (course is null)
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
         {
-            _logger.LogInformation($"Course:{courseId} was not found");
-            throw new NotFoundException("Course not found");
+            throw new ForbiddenException("Just the course professor has access to this course");
         }
+
+        var course = await courses.GetOneByIdAsync(courseId);
 
         if (!course.StudentIds.Contains(studentId))
         {
             _logger.LogInformation("Student is not enrolled in this course");
             throw new NotFoundException("Student not found");
         }
+
+        course.StudentIds.Remove(studentId);
 
         await courses.ReplaceAsync(course);
     }
@@ -159,7 +162,7 @@ public class GradesServiceImplementation(
             throw new NotFoundException("Course not found");
         }
 
-        await AddStudentAsync(course.Id, studentId);
+        await AddStudentAsync(course.Id, string.Empty, studentId, true);
     }
 
     public async Task<List<Course>> GetUserCoursesAsync(string userId, bool isProfessor)
@@ -179,7 +182,7 @@ public class GradesServiceImplementation(
         return await grades.MongoCollection.Find(g => g.StudentId == studentId).ToListAsync();
     }
 
-    public async Task<Grade> AddGradeAsync(string courseId, string studentId, double value)
+    public async Task<Grade> AddGradeAsync(string courseId, string professorId, string studentId, double value)
     {
         if (value < 1 || value > 10)
         {
@@ -196,12 +199,12 @@ public class GradesServiceImplementation(
 
         var courses = await _courses;
 
-        var course = await courses.GetOneByIdAsync(courseId);
-        if (course is null)
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
         {
-            _logger.LogError($"Course:{courseId} was not found");
-            throw new NotFoundException("Course not found");
+            throw new ForbiddenException("Just the course professor has access to this course");
         }
+
+        var course = await courses.GetOneByIdAsync(courseId);
 
         if (!course.StudentIds.Contains(studentId))
         {
@@ -227,8 +230,13 @@ public class GradesServiceImplementation(
         return grade;
     }
 
-    public async Task<Grade> UpdateGradeAsync(string courseId, string studentId, double value)
+    public async Task<Grade> UpdateGradeAsync(string courseId, string professorId, string studentId, double value)
     {
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
+        {
+            throw new ForbiddenException("Just the course professor has access to this course");
+        }
+
         if (value < 1 || value > 10)
         {
             _logger.LogInformation($"Invalid Grade Value:{value}");
@@ -250,8 +258,13 @@ public class GradesServiceImplementation(
         return grade;
     }
 
-    public async Task RemoveGradeAsync(string courseId, string studentId)
+    public async Task RemoveGradeAsync(string courseId, string professorId, string studentId)
     {
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
+        {
+            throw new ForbiddenException("Just the course professor has access to this course");
+        }
+
         var grades = await _grades;
 
         var grade = await grades.GetOneAsync(g => g.CourseId == courseId && g.StudentId == studentId);
@@ -264,20 +277,11 @@ public class GradesServiceImplementation(
         await grades.DeleteWithIdAsync(grade.Id);
     }
 
-    public async Task<BulkResult> BulkAddStudentsAsync(string courseId, string professorId, string fileName)
+    public async Task<BulkResult<bool>> BulkAddStudentsAsync(string courseId, string professorId, string fileName)
     {
-        var courses = await _courses;
-        var course = await courses.GetOneByIdAsync(courseId);
-        if (course is null)
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
         {
-            _logger.LogError($"Course{courseId} was not found");
-            throw new BadRequestException("Course not found");
-        }
-
-        if (course.ProfessorId == professorId)
-        {
-            _logger.LogError("Students cannot be added by other professors");
-            throw new ForbiddenException("Students cannot be added by other professors");
+            throw new ForbiddenException("Just the course professor has access to this course");
         }
 
         List<string> headers;
@@ -320,23 +324,117 @@ public class GradesServiceImplementation(
 
             try
             {
-                await AddStudentAsync(courseId, userId);
+                await AddStudentAsync(courseId, professorId, userId);
                 success++;
             }
             catch (Exception ex)
             {
                 _logger.LogInformation(ex.Message);
+                errors.Add($"{ex.Message} at row:{total}");
                 skipped++;
             }
         }
 
-        return new BulkResult
+        return new BulkResult<bool>
         {
             TotalCount = total,
             SuccessCount = success,
             SkipedCount = skipped,
-            Errors = errors
+            Errors = errors,
+            Result = success == total
         };
+    }
+
+    public async Task<BulkResult<List<Grade>>> BulkGradesOperationAsync(string courseId, string professorId, string fileName, bool isInsert = false)
+    {
+        if (!await IsCourseProfessorOrThrow(courseId, professorId))
+        {
+            throw new ForbiddenException("Just the course professor has access to this course");
+        }
+
+        List<string> headers;
+        List<List<(string CellType, object? Value)>> rows;
+
+        (headers, rows) = await GetExcelData(fileName, ["string", "double"]);
+
+        if (headers.Except(["Email", "Grade"]).Any())
+        {
+            _logger.LogError("Excel template does not match");
+            throw new BadRequestException("Excel template does not match");
+        }
+
+        int total = 0;
+        int success = 0;
+        int skipped = 0;
+        List<string> errors = [];
+        List<Grade> grades = [];
+        foreach (var row in rows)
+        {
+            total++;
+
+            object? email = row.ElementAt(0).Value;
+            object? grade = row.ElementAt(1).Value;
+
+            if (email is not string emailStr || grade is not double gradeDou)
+            {
+                skipped++;
+                errors.Add($"Missing data at row:{total}");
+                continue;
+            }
+
+            var userRes = await _usersService.GetUserByEmailAsync(new UserEmailRequest { Email = emailStr });
+            if (!userRes.Success || userRes.Body is null)
+            {
+                skipped++;
+                errors.Add($"Invalid email at row:{total}");
+                continue;
+            }
+
+            var payload = userRes.Payload;
+            string userId = payload.GetString("Id");
+
+            try
+            {
+                Grade resGrade =  isInsert ? await AddGradeAsync(courseId, professorId, userId, gradeDou) : await UpdateGradeAsync(courseId, professorId, userId, gradeDou);
+                grades.Add(resGrade);
+                success++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogInformation(ex.Message);
+                errors.Add($"{ex.Message} at row:{total}");
+                skipped++;
+            }
+        }
+
+        return new BulkResult<List<Grade>>
+        {
+            TotalCount = total,
+            SuccessCount = success,
+            SkipedCount = skipped,
+            Errors = errors,
+            Result = grades
+        };
+    }
+
+    private async Task<bool> IsCourseProfessorOrThrow(string courseId, string professorId)
+    {
+        var courses = await _courses;
+
+        var course = await courses.GetOneByIdAsync(courseId);
+        if (course is null)
+        {
+            _logger.LogError($"Course:{courseId} was not found");
+            throw new NotFoundException("Course not found");
+        }
+
+        if (course.ProfessorId != professorId)
+        {
+            _logger.LogInformation($"Profesor:{professorId} cannot modify students/grades to Course:{course.Name}, Professor:{course.ProfessorId}");
+            throw new ForbiddenException("Just the course professor has access to this course");
+        }
+
+        return true;
     }
 
     private async Task<(List<string> Headers, List<List<(string CellType, object? Value)>> Rows)> GetExcelData(string fileName, string[] types)
@@ -392,10 +490,7 @@ public class GradesServiceImplementation(
         if (cell.TryGetString("Value") is string s)
             return s;
 
-        if (cell.TryGetInt32("Value") is int i)
-            return i;
-
-        if (cell.TryGetBool("Value") is bool b)
+        if (cell.TryGetDouble("Value") is double b)
             return b;
 
         return null;
