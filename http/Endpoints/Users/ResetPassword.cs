@@ -5,7 +5,7 @@ using usersServiceClient;
 
 namespace http.Endpoints.Users;
 
-public class ResetPassword(ILogger<ResetPassword> logger) : CampusEndpoint<ResetPasswordRequest>(logger)
+public class ResetPassword(ILogger<ResetPassword> logger) : CampusEndpoint<EmailRequest>(logger)
 {
     public usersService.usersServiceClient Client { get; set; } = default!;
 
@@ -15,10 +15,20 @@ public class ResetPassword(ILogger<ResetPassword> logger) : CampusEndpoint<Reset
         AllowAnonymous(); 
     }
 
-    public override async Task HandleAsync(ResetPasswordRequest req, CancellationToken cancellationToken)
+    public override async Task HandleAsync(EmailRequest req, CancellationToken cancellationToken)
     {
-        MessageResponse response = await Client.ResetPasswordAsync(req, null, null, cancellationToken);
+        if (string.IsNullOrWhiteSpace(req.Email))
+        {
+            await HandleErrorsAsync(400, "Email is required", cancellationToken);
+            return;
+        }
 
+        var grpcRequest = new ResetPasswordRequest
+        {
+            Email = req.Email
+        };
+
+        MessageResponse response = await Client.ResetPasswordAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(response, cancellationToken: cancellationToken);
     }
 }

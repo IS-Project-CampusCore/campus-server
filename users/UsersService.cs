@@ -16,6 +16,16 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
         return await _mediator.Send(request);
     }
 
+    public override async Task<MessageResponse> GetUsersByRole(UsersRoleRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+
+    public override async Task<MessageResponse> GetUsersByUniversity(UsersUniversityRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+
     public override async Task<MessageResponse> Login(LoginRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request);
@@ -34,7 +44,11 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
     {
         return await _mediator.Send(request);
     }
-    public override async Task<MessageResponse> RegisterUsersFromExcel(UsersExcelRequest request, ServerCallContext context)
+    public override async Task<MessageResponse> RegisterUsersFromExcel(RegisterFromExcelRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+    public override async Task<MessageResponse> UpdateUsersFromExcel(UpdateFromExcelRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request);
     }
@@ -47,6 +61,11 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
         return await _mediator.Send(request);
     }
     public override async Task<MessageResponse> GetAllUsers(GetAllUsersRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
+
+    public override async Task<MessageResponse> UpdateUser(UpdateUserRequest request, ServerCallContext context)
     {
         return await _mediator.Send(request);
     }

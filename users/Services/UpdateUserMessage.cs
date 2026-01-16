@@ -1,32 +1,30 @@
-﻿using commons.Protos;
-using commons.RequestBase;
-using Grpc.Core;
-using MediatR;
+﻿using commons.RequestBase;
 using users.Implementation;
 using users.Model;
 using usersServiceClient;
 
 namespace users.Services;
 
-public class RegisterMessage(
+public class UpdateUserMessage(
     ILogger<LoginMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<RegisterRequest, User?>(logger)
+) : CampusMessage<UpdateUserRequest, User?>(logger)
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    protected override async Task<User?> HandleMessage(RegisterRequest request, CancellationToken token)
+    protected override async Task<User?> HandleMessage(UpdateUserRequest request, CancellationToken token)
     {
-        var email = request.Email;
-        var name = request.Name;
-        var role = User.StringToRole(request.Role);
+        var name = request.HasName ? request.Name : null;
+        UserType? role = request.HasRole ? User.StringToRole(request.Role) : null;
         var university = request.HasUniversity ? request.University : null;
         int? year = request.HasYear ? request.Year : null;
         int? group = request.HasGroup ? request.Group : null;
         var major = request.HasMajor ? request.Major : null;
+        var dormitory = request.HasDormitory ? request.Dormitory : null;
+        string? room = request.HasRoom ? request.Room : null;
         var department = request.HasDepartment ? request.Department : null;
         var title = request.HasTitle ? request.Title : null;
 
-        return await _implementation.RegisterUser(email, name, role, university, year, group, major, department, title);
+        return await _implementation.UpdateUserAsync(request.Email, name, role, university, year, group, major, dormitory, room, department, title);
     }
 }

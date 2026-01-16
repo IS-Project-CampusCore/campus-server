@@ -1,8 +1,7 @@
 ﻿using commons.Protos;
-using FastEndpoints; 
+using FastEndpoints;
 using http.Auth;
 using usersServiceClient;
-using System.Security.Claims;
 
 namespace http.Endpoints.Users;
 
@@ -20,7 +19,6 @@ public class DeleteAccount(ILogger<DeleteAccount> logger) : CampusEndpoint<Empty
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)
     {
         string? userId = GetUserId();
-        
 
         if (string.IsNullOrEmpty(userId))
         {
@@ -34,7 +32,6 @@ public class DeleteAccount(ILogger<DeleteAccount> logger) : CampusEndpoint<Empty
         };
 
         MessageResponse response = await Client.DeleteAccountAsync(grpcRequest, null, null, cancellationToken);
-
         await SendAsync(response, cancellationToken: cancellationToken);
     }
 }

@@ -1,5 +1,4 @@
 ﻿using commons.Protos;
-using FastEndpoints;
 using http.Endpoints;
 using usersServiceClient;
 
@@ -31,7 +30,7 @@ public class Login(ILogger<Login> logger) : CampusEndpoint<LoginApiRequest>(logg
             Password = req.Password,
         };
 
-        MessageResponse grpcResponse = Client.Login(grpcRequest, null, null, cancellationToken);
+        MessageResponse grpcResponse = await Client.LoginAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(grpcResponse, cancellationToken);
     }
 }

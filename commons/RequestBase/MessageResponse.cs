@@ -98,10 +98,7 @@ public partial class MessageResponse
     }
     public T? GetPayload<T>(JsonSerializerOptions? options = null)
     {
-        if (string.IsNullOrEmpty(Body)) 
-            return default;
-
-        return JsonSerializer.Deserialize<T>(Body, options);
+        return Payload.Json.Deserialize<T>(options);
     }
 
     public static string BodyToString(object? body)

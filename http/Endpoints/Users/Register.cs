@@ -1,11 +1,10 @@
 ﻿using commons.Protos;
-using FastEndpoints;
 using http.Endpoints;
 using usersServiceClient;
 
 namespace http.Enpoints.Users;
 
-public record RegisterApiRequest(string Email, string Name, string Role);
+public record RegisterApiRequest(string Email, string Name, string Role, string? University, int? Year, int? Group, string? Major, string? Department, string? Title);
 
 public class Register(ILogger<Register> logger) : CampusEndpoint<RegisterApiRequest>(logger)
 {
@@ -29,10 +28,23 @@ public class Register(ILogger<Register> logger) : CampusEndpoint<RegisterApiRequ
         {
             Email = req.Email,
             Name = req.Name,
-            Role = req.Role,
+            Role = req.Role
         };
 
-        MessageResponse grpcResponse = Client.Register(grpcRequest, null, null, cancellationToken);
+        if (!string.IsNullOrEmpty(req.University))
+            grpcRequest.University = req.University;
+        if (req.Year.HasValue)
+            grpcRequest.Year = req.Year.Value;
+        if (req.Group.HasValue)
+            grpcRequest.Group = req.Group.Value;
+        if (!string.IsNullOrEmpty(req.Major))
+            grpcRequest.Major = req.Major;
+        if (!string.IsNullOrEmpty(req.Department))
+            grpcRequest.Department = req.Department;
+        if (!string.IsNullOrEmpty(req.Title))
+            grpcRequest.Title = req.Title;
+
+        MessageResponse grpcResponse = await Client.RegisterAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(grpcResponse, cancellationToken);
     }
 }
