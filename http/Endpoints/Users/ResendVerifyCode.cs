@@ -1,13 +1,11 @@
 ﻿using commons.Protos;
-using FastEndpoints;
-using http.Auth;
 using usersServiceClient;
 
 namespace http.Endpoints.Users; 
 
-public record ResendCodeRequest(string Email);
+public record EmailRequest(string Email);
 
-public class ResendVerifyCode(ILogger<ResendVerifyCode> logger) : CampusEndpoint<ResendCodeRequest>(logger)
+public class ResendVerifyCode(ILogger<ResendVerifyCode> logger) : CampusEndpoint<EmailRequest>(logger)
 {
     public usersService.usersServiceClient Client { get; set; } = default!;
 
@@ -17,7 +15,7 @@ public class ResendVerifyCode(ILogger<ResendVerifyCode> logger) : CampusEndpoint
         AllowAnonymous();
     }
 
-    public override async Task HandleAsync(ResendCodeRequest req, CancellationToken cancellationToken)
+    public override async Task HandleAsync(EmailRequest req, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(req.Email))
         {
@@ -31,7 +29,6 @@ public class ResendVerifyCode(ILogger<ResendVerifyCode> logger) : CampusEndpoint
         };
 
         MessageResponse response = await Client.ResendVerifyCodeAsync(grpcRequest, null, null, cancellationToken);
-
         await SendAsync(response, cancellationToken: cancellationToken);
     }
 }

@@ -22,7 +22,6 @@ public class GetAllUsers(ILogger<GetAllUsers> logger) : CampusEndpoint<EmptyRequ
         };
 
         MessageResponse response = await Client.GetAllUsersAsync(grpcRequest, null, null, cancellationToken);
-
         await SendAsync(response, cancellationToken: cancellationToken);
     }
 }

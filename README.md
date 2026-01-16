@@ -7,7 +7,8 @@ This repo contains the server architecture and business logic of CampusCore App 
 ### 1. Use-case Diagram
 
 The actors and the use cases are sown in the diagram below:
-<img width="1687" height="1689" alt="use_case_proiect drawio" src="https://github.com/user-attachments/assets/883af568-6db3-41c0-a196-991b78da7fe8" />
+<img width="1862" height="2246" alt="use_case_proiect drawio (8)" src="https://github.com/user-attachments/assets/c8929b04-d5cd-4327-b1b1-7b734667f9ae" />
+
 
 ## Installation
 

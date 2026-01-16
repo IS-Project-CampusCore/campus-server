@@ -7,7 +7,9 @@ using emailServiceClient;
 using excelServiceClient;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,15 +24,19 @@ namespace users.Implementation;
 public interface IUsersServiceImplementation
 {
     public Task<User?> GetUserById(string id);
-    public Task<User?> RegisterUser(string email, string name, UserType role);
+    Task<List<User>> GetAllUsers();
+    Task<List<User>> GetUsersByRole(UserType role);
+    Task<List<User>> GetUsersByUniversity(string university);
+    public Task<User?> GetUserByEmail(string email);
+    public Task<User?> RegisterUser(string email, string name, UserType role, string? university, int? year, int? group, string? major, string? department, string? title);
     public Task<UserWithJwt> AuthUser(string email, string password);
     public Task<UserWithJwt> Verify(string email, string password, string verifyCode);
-    public Task<List<User?>> RegisterUsersFromExcel(string fileName);
+    public Task<BulkResponse> BulkRegisterAsync(string fileName);
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
-
-    Task<List<User>> GetAllUsers();
+    Task<User?> UpdateUserAsync(string email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title);
+    public Task<BulkResponse> BulkUpdateAsync(string fileName);
 }
 
 public class UsersServiceImplementation(
@@ -49,20 +55,47 @@ public class UsersServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
 
+    private static string[] s_userInfoTypes = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
+
     public async Task<List<User>> GetAllUsers()
     {
-        var db = await _usersCollection;
-        return await db.MongoCollection.Find(_ => true).ToListAsync();
+        var users = await _usersCollection;
+        return await users.MongoCollection.Find(_ => true).ToListAsync();
     }
 
     public async Task<User?> GetUserById(string id)
     {
-        var db = await _usersCollection;
-        return await db.GetOneByIdAsync(id);
+        var users = await _usersCollection;
+        return await users.GetOneByIdAsync(id);
+    }
+
+    public async Task<User?> GetUserByEmail(string email)
+    {
+        var users = await _usersCollection;
+        return await users.GetOneAsync(u => u.Email == email);
+    }
+
+    public async Task<List<User>> GetUsersByRole(UserType role)
+    {
+        var users = await _usersCollection;
+        return await users.MongoCollection.Find(u => u.Role == role).ToListAsync();
+    }
+
+    public async Task<List<User>> GetUsersByUniversity(string university)
+    {
+        var users = await _usersCollection;
+
+        var filter = Builders<User>.Filter.OfType<Communicator>(c => c.University == university);
+        return await users.MongoCollection.Find(filter).ToListAsync();
     }
 
     public async Task<UserWithJwt> AuthUser(string email, string password)
     {
+        if (!IsValidEmail(email) || !IsValidPassword(password))
+        {
+            throw new BadRequestException("Email or password incorrect");
+        }
+
         User? user = await FindByEmailOrDefault(email);
 
         if (user is null || !VerifyPassword(password, user.PasswordHash))
@@ -78,65 +111,46 @@ public class UsersServiceImplementation(
         }
 
         user.LastLoginAt = DateTime.UtcNow;
-        await UpdateUser(user);
+        await UpdateUserAsync(user);
 
         _logger.LogInformation($"User:{user.Id} has been authenticated");
         return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Name, user.Role));
     }
 
-    public async Task<User?> RegisterUser(string email, string name, UserType role)
+    public async Task<User?> RegisterUser(string email, string name, UserType role, string? university, int? year, int? group, string? major, string? department, string? title)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        User? user = NewUserFromData(email, name, role, university, year, group, major, null, null, department, title);
+        if (user is null)
         {
-            throw new BadRequestException("Email cannot be empty.");
+            _logger.LogError("Invalid user data");
+            throw new BadRequestException("Invalid user data");
+        }
+        return await RegisterUser(user);
+    }
+
+    private async Task<User?> RegisterUser(User newUser)
+    {
+        if (!IsValidEmail(newUser.Email))
+        {
+            throw new BadRequestException("Invalid email address");
         }
 
-        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-        if (!Regex.IsMatch(email, emailPattern))
+        var users = await _usersCollection;
+
+        if (await users.ExistsAsync(u => u.Email == newUser.Email))
         {
-            throw new BadRequestException("Please enter a valid email address.");
+            _logger.LogError($"Email:{newUser.Email} is already used");
+            throw new BadRequestException($"Email:{newUser.Email} is already used");
         }
 
-        var db = await _usersCollection;
+        await users.InsertAsync(newUser);
 
-        if (await db.ExistsAsync(u => u.Email == email))
-        {
-            _logger.LogError($"Email:{email} is already used");
-            throw new BadRequestException($"Email:{email} is already used");
-        }
+        string verifyCode = GenerateVerifyCode();
+        _logger.LogInformation($"Verify Code:{verifyCode} generated for email: {newUser.Email}");
 
-        User newUser = new User
-        {
-            Email = email,
-            Name = name,
-            Role = role,
-            IsVerified = false,
-            CreatedAt = DateTime.UtcNow
-        };
+        await StoreVerifyCode(newUser.Id, verifyCode);
 
-        await db.InsertAsync(newUser);
-
-        int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-        var verfyCode = verifyCodeNumber.ToString("D4");
-
-        _logger.LogInformation($"Verify Code:{verfyCode} generated for email: {email}");
-
-        await StoreVerifyCode(newUser.Id, verfyCode);
-
-        string templateDataString = JsonSerializer.Serialize(new { Name = name, Code = verfyCode });
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = email,
-            ToName = name,
-            TemplateName = "Welcome",
-            TemplateData = templateDataString
-        });
-
-        if (!response.Success)
-        {
-            _logger.LogError($"SendEmail has failed with Code:{response.Code} and Error:{response.Errors}");
-            throw new InternalErrorException(response.Errors);
-        }
+        await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
 
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
@@ -165,10 +179,9 @@ public class UsersServiceImplementation(
 
     public async Task<UserWithJwt> Verify(string email, string password, string verifyCode)
     {
-        string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
-        if (string.IsNullOrWhiteSpace(password) || !Regex.IsMatch(password, passwordPattern))
+        if (!IsValidEmail(email) || !IsValidPassword(password))
         {
-            throw new BadRequestException("Password does not meet security requirements.");
+            throw new BadRequestException("Email or password incorrect");
         }
 
         User? user = await FindByEmailOrDefault(email);
@@ -201,7 +214,7 @@ public class UsersServiceImplementation(
             user.PasswordHash = passwordHash;
             user.IsVerified = true;
 
-            await UpdateUser(user);
+            await UpdateUserAsync(user);
 
             return new UserWithJwt(user, GenerateJwtToken(user.Id, email, user.Name, user.Role));
         }
@@ -217,15 +230,9 @@ public class UsersServiceImplementation(
 
     public async Task ResendVerifyCode(string email)
     {
-        if (string.IsNullOrWhiteSpace(email))
+        if (!IsValidEmail(email))
         {
-            throw new BadRequestException("Email cannot be empty.");
-        }
-
-        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
-        if (!Regex.IsMatch(email, emailPattern))
-        {
-            throw new BadRequestException("Please enter a valid email address.");
+            throw new BadRequestException("Invalid email address");
         }
 
         User? user = await FindByEmailOrDefault(email);
@@ -252,35 +259,21 @@ public class UsersServiceImplementation(
             {
                 throw new InternalErrorException("System indicates code exists but none found.");
             }
+
             codeToSend = existingCode;
             _logger.LogInformation($"Resending existing code for User:{email}");
         }
         else
         {
-            int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-            codeToSend = verifyCodeNumber.ToString("D4");
+            codeToSend = GenerateVerifyCode();
             await StoreVerifyCode(user.Id, codeToSend);
             _logger.LogInformation($"Generated new code for User:{email} as none existed.");
         }
 
-        string templateDataString = JsonSerializer.Serialize(new { Name = user.Name, Code = codeToSend });
-
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = user.Email,
-            ToName = user.Name,
-            TemplateName = "Welcome",
-            TemplateData = templateDataString
-        });
-
-        if (!response.Success)
-        {
-            _logger.LogError($"Resend email failed with Code:{response.Code} and Error:{response.Errors}");
-            throw new InternalErrorException(response.Errors);
-        }
+        await SendVerifyEmail(user.Email, user.Name, codeToSend);
     }
 
-    public async Task<List<User?>> RegisterUsersFromExcel(string fileName)
+    public async Task<BulkResponse> BulkRegisterAsync(string fileName)
     {
         if (fileName is null) throw new BadRequestException("No file selected");
 
@@ -289,46 +282,162 @@ public class UsersServiceImplementation(
             FileName = fileName
         };
 
-        request.CellTypes.Add("String");
-        request.CellTypes.Add("String");
-        request.CellTypes.Add("String");
+        request.CellTypes.AddRange(s_userInfoTypes);
 
         var response = await _excelService.ParseExcelAsync(request);
 
-        if (!response.Success) throw new InternalErrorException(response.Errors);
-        if (string.IsNullOrEmpty(response.Body)) throw new BadRequestException("Empty excel file");
+        if (!response.Success)
+            throw new InternalErrorException(response.Errors);
 
-        ExcelData data = response.GetPayload<ExcelData>()!;
+        if (string.IsNullOrEmpty(response.Body)) 
+            throw new BadRequestException("Empty excel file");
 
-        if (data.Errors != null && data.Errors.Count > 0)
+        var payload = response.Payload;
+        IEnumerable<string>? errors = payload.TryGetArray("Errors")?.IterateStrings();
+
+        if (errors is not null && errors.Any())
         {
-            string aggregatedErrors = string.Join("\n", data.Errors);
-            _logger.LogError($"Excel parsing failed with {data.Errors.Count} errors for file {fileName}");
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
             throw new BadRequestException(aggregatedErrors);
         }
 
-        List<RegisterRequest> requests = ExcelToRegisterRequest.ConvertToRegisterRequest(data);
+        ExcelData? data = response.GetPayload<ExcelData>();
+        if (data is null)
+        {
+            _logger.LogError("Excel data was corrupted");
+            throw new InternalErrorException("Corrupted excel data");
+        }
 
-        List<User?> users = [];
-        foreach (var req in requests)
+        List<User> users;
+        try
+        {
+           (users, errors) = ExcelToUserModels.ConvertToUserModels(data);
+        }
+        catch (ServiceMessageException ex)
+        {
+            _logger.LogError(ex, $"Convert to User model failed with Exception:{ex.GetType().Name}, Msg:{ex.Message}");
+            throw new BadRequestException(ex.Message);
+        }
+
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        int total = users.Count;
+        int registered = 0;
+        int skiped = 0;
+        List<PerUserResult> results = [];
+
+        foreach (var user in users)
         {
             try
             {
-                User? newUser = await RegisterUser(req.Email, req.Name, User.StringToRole(req.Role));
-                users.Add(newUser);
+                User? newUser = await RegisterUser(user);
+                results.Add(new PerUserResult(newUser!.Email));
+                registered++;
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Request(Email:{req.Email}) exit with Error:{ex.Message}");
+                _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
+                results.Add(new PerUserResult(user.Email, ex.Message));
+                skiped++;
             }
         }
-        return users;
+        return new BulkResponse
+        {
+            TotalCount = total,
+            SuccessCount = registered,
+            SkipedCount = skiped,
+            Results = results
+        };
     }
 
-    private async Task<User?> FindByEmailOrDefault(string email)
+    public async Task<BulkResponse> BulkUpdateAsync(string fileName)
     {
-        var db = await _usersCollection;
-        return await db.GetOneAsync(x => x.Email == email);
+        if (fileName is null) 
+            throw new BadRequestException("No file selected");
+
+        var request = new ParseExcelRequest
+        {
+            FileName = fileName
+        };
+
+        request.CellTypes.AddRange(s_userInfoTypes);
+
+        var response = await _excelService.ParseExcelAsync(request);
+
+        if (!response.Success)
+            throw new InternalErrorException(response.Errors);
+
+        if (string.IsNullOrEmpty(response.Body))
+            throw new BadRequestException("Empty excel file");
+
+        var payload = response.Payload;
+        IEnumerable<string>? errors = payload.TryGetArray("Errors")?.IterateStrings();
+
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        ExcelData? data = response.GetPayload<ExcelData>();
+        if (data is null)
+        {
+            _logger.LogError("Excel data was corrupted");
+            throw new InternalErrorException("Corrupted excel data");
+        }
+
+        List<User> users;
+        try
+        {
+            (users, errors) = ExcelToUserModels.ConvertToUserModels(data, false, false);
+        }
+        catch (ServiceMessageException ex)
+        {
+            _logger.LogError(ex, $"Convert to User model failed with Exception:{ex.GetType().Name}, Msg:{ex.Message}");
+            throw new BadRequestException(ex.Message);
+        }
+
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        int total = users.Count;
+        int registered = 0;
+        int skiped = 0;
+        List<PerUserResult> results = [];
+
+        foreach (var user in users)
+        {
+            try
+            {
+                User? newUser = await UpdateUserAsync(user.Email, user);
+                results.Add(new PerUserResult(newUser!.Email));
+                registered++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
+                results.Add(new PerUserResult(user.Email, ex.Message));
+                skiped++;
+            }
+        }
+        return new BulkResponse
+        {
+            TotalCount = total,
+            SuccessCount = registered,
+            SkipedCount = skiped,
+            Results = results
+        };
     }
 
     public async Task ResetPassword(string email)
@@ -342,30 +451,83 @@ public class UsersServiceImplementation(
             throw new BadRequestException($"User with email {email} does not exist.");
         }
         await db.UpdateAsync(u => u.Email == email, u => u.IsVerified, false);
-        int verifyCodeNumber = RandomNumberGenerator.GetInt32(0, 10000);
-        var verfyCode = verifyCodeNumber.ToString("D4");
 
-        _logger.LogInformation($"Reset Password Code:{verfyCode} generated for email: {email}");
+        string verfiyCode = GenerateVerifyCode();
+        _logger.LogInformation($"Reset Password Code:{verfiyCode} generated for email: {email}");
 
-        await StoreVerifyCode(user.Id, verfyCode);
+        await StoreVerifyCode(user.Id, verfiyCode);
 
-        string templateDataString = JsonSerializer.Serialize(new { Name = user.Name, Code = verfyCode });
-        var response = await _emailService.SendEmailAsync(new SendEmailRequest
-        {
-            ToEmail = email,
-            ToName = user.Name,
-            TemplateName = "Welcome", 
-            TemplateData = templateDataString
-        });
-
-        if (!response.Success)
-        {
-            _logger.LogError($"SendEmail failed: {response.Errors}");
-            throw new InternalErrorException("Could not send reset email.");
-        }
+        await SendVerifyEmail(user.Email, user.Name, verfiyCode);
     }
 
-    private async Task<User> UpdateUser(User userToUpdate)
+    public async Task<User?> UpdateUserAsync(string email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title)
+    {
+        var users = await _usersCollection;
+        User? user = await users.GetOneAsync(u => u.Email == email);
+        if (user is null)
+        {
+            _logger.LogError($"User with Email:{email} was not found.");
+            throw new NotFoundException("User not found");
+        }
+
+        name ??= user.Name;
+        role ??= user.Role;
+
+        if (user is Communicator communicator)
+        {
+            university ??= communicator.University;
+        }
+
+        if (user is Professor professor)
+        {
+            department ??= professor.Department;
+            title ??= professor.Title;
+        }
+
+        if (user is Student student)
+        {
+            year ??= student.Year;
+            group ??= student.Group;
+            major ??= student.Major;
+        }
+
+        if(user is CampusStudent campusStudent)
+        {
+            dormitory ??= campusStudent.Dormitory;
+            room ??= campusStudent.Room;
+        }
+
+        User? updatedUser = NewUserFromData(email, name, role, university, year, group, major, dormitory, room, department, title);
+        if (updatedUser is null)
+        {
+            _logger.LogError("Could not update User");
+            throw new InternalErrorException("Could not update user");
+        }
+
+        return await UpdateUserAsync(email, updatedUser);
+    }
+
+    private async Task<User> UpdateUserAsync(string email, User updatedUser)
+    {
+        var users = await _usersCollection;
+        User? user = await users.GetOneAsync(u => u.Email == email);
+        if (user is null)
+        {
+            _logger.LogError($"User was not found.");
+            throw new NotFoundException("User not found");
+        }
+
+        updatedUser.Id = user.Id;
+        updatedUser.IsVerified = user.IsVerified;
+        updatedUser.PasswordHash = user.PasswordHash;
+        updatedUser.CreatedAt = user.CreatedAt;
+        updatedUser.LastLoginAt = user.LastLoginAt;
+
+        await users.ReplaceAsync(updatedUser);
+        return updatedUser;
+    }
+
+    private async Task<User> UpdateUserAsync(User userToUpdate)
     {
         var db = await _usersCollection;
         if (!await db.ExistsAsync(u => u.Id == userToUpdate.Id))
@@ -376,6 +538,27 @@ public class UsersServiceImplementation(
         return userToUpdate;
     }
 
+    private bool IsValidEmail(string email)
+    {
+
+        string emailPattern = @"^[^@\s]+@[^@\s]+\.[^@\s]+$";
+        return !string.IsNullOrEmpty(email) && Regex.IsMatch(email, emailPattern);
+    }
+
+    private bool IsValidPassword(string password)
+    {
+        string passwordPattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_\-+=\[{\]};:'"",<.>/?\\|`~]).{8,}$";
+        return !string.IsNullOrEmpty(password) && Regex.IsMatch(password, passwordPattern);
+    }
+
+    private async Task<User?> FindByEmailOrDefault(string email)
+    {
+        var db = await _usersCollection;
+        return await db.GetOneAsync(x => x.Email == email);
+    }
+
+    private string GenerateVerifyCode() => RandomNumberGenerator.GetInt32(0, 10000).ToString("D4");
+
     private async Task StoreVerifyCode(string userId, string code)
     {
         var db = await _verifyCollection;
@@ -383,7 +566,8 @@ public class UsersServiceImplementation(
         if (await db.ExistsAsync(v => v.UserId == userId))
         {
             var existing = await db.GetOneAsync(v => v.UserId == userId);
-            if (existing != null) await db.DeleteWithIdAsync(existing.Id);
+            if (existing is not null) 
+                await db.DeleteWithIdAsync(existing.Id);
         }
 
         var verifyEntry = new VerifyCode
@@ -394,6 +578,12 @@ public class UsersServiceImplementation(
         };
 
         await db.InsertAsync(verifyEntry);
+    }
+
+    private async Task<bool> HasVerifyCode(string userId)
+    {
+        var db = await _verifyCollection;
+        return await db.ExistsAsync(v => v.UserId == userId);
     }
 
     private async Task<string?> GetVerificationCode(string userId)
@@ -413,10 +603,166 @@ public class UsersServiceImplementation(
         }
     }
 
-    private async Task<bool> HasVerifyCode(string userId)
+    private async Task SendVerifyEmail(string email, string name, string code)
     {
-        var db = await _verifyCollection;
-        return await db.ExistsAsync(v => v.UserId == userId);
+        string templateDataString = JsonSerializer.Serialize(new { Name = name, Code = code });
+        var response = await _emailService.SendEmailAsync(new SendEmailRequest
+        {
+            ToEmail = email,
+            ToName = name,
+            TemplateName = "Welcome",
+            TemplateData = templateDataString
+        });
+
+        if (!response.Success)
+        {
+            _logger.LogError($"SendEmail failed: {response.Errors}");
+            throw new InternalErrorException("Could not send reset email.");
+        }
+    }
+
+    private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
+
+    private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
+
+    private static User? NewUserFromData(string? email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title)
+    {
+        switch (role)
+        {
+            case UserType.CAMPUS_STUDENT:
+                return NewCampusStudentFromData(email, name, university, year, group, major, dormitory, room);
+            case UserType.STUDENT:
+                return NewStudentFromData(email, name, university, year, group, major);
+            case UserType.PROFESSOR:
+                return NewProfessorFromData(email, name, university, department, title);
+            case UserType.MANAGEMENT:
+                return NewManagementFromData(email, name);
+            case UserType.ADMIN:
+                return NewAdminFromData(email, name);
+            case UserType.GUEST:
+                return NewUserFromData(email, name);
+            default:
+                return null;
+        }
+    }
+
+    private static CampusStudent? NewCampusStudentFromData(string? email, string? name, string? university, int? year, int? group, string? major, string? dormitory, string? room)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || !year.HasValue || !group.HasValue || string.IsNullOrEmpty(major))
+            return null;
+
+        return new CampusStudent
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.CAMPUS_STUDENT,
+            University = university,
+            Year = year.Value,
+            Group = group.Value,
+            Major = major,
+            Dormitory = dormitory,
+            Room = room
+        };
+    }
+
+    private static Student? NewStudentFromData(string? email, string? name, string? university, int? year, int? group, string? major)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || !year.HasValue || !group.HasValue || string.IsNullOrEmpty(major))
+            return null;
+
+        return new Student
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.STUDENT,
+            University = university,
+            Year = year.Value,
+            Group = group.Value,
+            Major = major
+        };
+    }
+
+    private static Professor? NewProfessorFromData(string? email, string? name, string? university, string? department, string? title)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || string.IsNullOrEmpty(department) || string.IsNullOrEmpty(title))
+            return null;
+
+        return new Professor
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.PROFESSOR,
+            University = university,
+            Department = department,
+            Title = title
+        };
+    }
+
+    private static Management? NewManagementFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Management
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.MANAGEMENT
+        };
+    }
+    private static Admin? NewAdminFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Admin
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.ADMIN
+        };
+    }
+    private static User? NewUserFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Admin
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.GUEST
+        };
+    }
+
+    private string GenerateJwtToken(string userId, string userEmail, string userName, UserType role)
+    {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var key = Encoding.ASCII.GetBytes(_config["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex");
+        var claims = new[]
+        {
+            new Claim(UserJwtExtensions.IdClaim, userId),
+            new Claim(UserJwtExtensions.EmailClaim, userEmail),
+            new Claim(UserJwtExtensions.NameClaim, userName),
+            new Claim(UserJwtExtensions.RoleClaim, role.ToString().ToLowerInvariant()),
+            new Claim(UserJwtExtensions.IsVerifiedClaim, "true")
+        };
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new ClaimsIdentity(claims),
+            Expires = DateTime.UtcNow.AddHours(1),
+            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+        };
+        return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
     }
 
     internal static async Task<IDatabaseCollection<User>> GetUserCollection(IDatabase database)
@@ -442,30 +788,5 @@ public class UsersServiceImplementation(
         );
 
         return collection;
-    }
-
-    private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
-
-    private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
-
-    private string GenerateJwtToken(string userId, string userEmail, string userName, UserType role)
-    {
-        var tokenHandler = new JwtSecurityTokenHandler();
-        var key = Encoding.ASCII.GetBytes(_config["SecretKey"] ?? "a_very_secret_key_that_must_be_long_and_complex");
-        var claims = new[]
-        {
-            new Claim(UserJwtExtensions.IdClaim, userId),
-            new Claim(UserJwtExtensions.EmailClaim, userEmail),
-            new Claim(UserJwtExtensions.NameClaim, userName),
-            new Claim(UserJwtExtensions.RoleClaim, role.ToString().ToLowerInvariant()),
-            new Claim(UserJwtExtensions.IsVerifiedClaim, "true")
-        };
-        var tokenDescriptor = new SecurityTokenDescriptor
-        {
-            Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddHours(1),
-            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-        };
-        return tokenHandler.WriteToken(tokenHandler.CreateToken(tokenDescriptor));
     }
 }
