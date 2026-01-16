@@ -43,7 +43,11 @@ public partial class ResendVerifyCodeRequest : IRequestBase
 {
     public string? Validate() => string.IsNullOrEmpty(Email) ? "Email cannot be empty." : null;
 }
-public partial class UsersExcelRequest : IRequestBase
+public partial class RegisterFromExcelRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(FileName) ? "File Name can not be empty" : null;
+}
+public partial class UpdateFromExcelRequest : IRequestBase
 {
     public string? Validate() => string.IsNullOrEmpty(FileName) ? "File Name can not be empty" : null;
 }
@@ -58,4 +62,9 @@ public partial class ResetPasswordRequest : IRequestBase
 public partial class GetAllUsersRequest : IRequestBase
 {
     public string? Validate() => null;
+}
+
+public partial class UpdateUserRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(Email) ? "Email cannot be null." : null;
 }

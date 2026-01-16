@@ -6,7 +6,12 @@ namespace users.Model;
 
 public enum UserType { GUEST, ADMIN, MANAGEMENT, STUDENT, PROFESSOR, CAMPUS_STUDENT, NO_ROLE };
 
+[BsonDiscriminator(RootClass = true)]
+[BsonKnownTypes(typeof(Communicator))]
+[BsonKnownTypes(typeof(Management))]
+[BsonKnownTypes(typeof(Admin))]
 [CollectionName("Users")]
+[BsonIgnoreExtraElements]
 public record User : DatabaseModel
 {
     public required string Name { get; set; } = string.Empty;

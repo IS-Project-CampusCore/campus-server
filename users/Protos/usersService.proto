@@ -9,16 +9,18 @@ package usersService;
 service usersService
 { 
     rpc GetUserById (UserIdRequest) returns (commons.protos.MessageResponse);
+    rpc GetAllUsers (GetAllUsersRequest) returns (commons.protos.MessageResponse);
 
     rpc Verify (VerifyRequest) returns (commons.protos.MessageResponse);
     rpc Login (LoginRequest) returns (commons.protos.MessageResponse);
     rpc Register (RegisterRequest) returns (commons.protos.MessageResponse);
-    
-    rpc RegisterUsersFromExcel (UsersExcelRequest) returns (commons.protos.MessageResponse);
     rpc ResendVerifyCode (ResendVerifyCodeRequest) returns (commons.protos.MessageResponse);
     rpc DeleteAccount (DeleteAccountRequest) returns (commons.protos.MessageResponse);
     rpc ResetPassword (ResetPasswordRequest) returns (commons.protos.MessageResponse);
-    rpc GetAllUsers (GetAllUsersRequest) returns (commons.protos.MessageResponse);
+    rpc UpdateUser (UpdateUserRequest) returns (commons.protos.MessageResponse);
+    
+    rpc RegisterUsersFromExcel (RegisterFromExcelRequest) returns (commons.protos.MessageResponse);
+    rpc UpdateUsersFromExcel (UpdateFromExcelRequest) returns (commons.protos.MessageResponse);
 }
 
 message UserIdRequest
@@ -28,9 +30,9 @@ message UserIdRequest
 
 message VerifyRequest
 {
-  string email = 1;
-  string password = 2;
-  string code = 3;
+    string email = 1;
+    string password = 2;
+    string code = 3;
 }
 message ResendVerifyCodeRequest
 {
@@ -42,6 +44,12 @@ message RegisterRequest
     string email = 1;
     string name = 2;
     string role = 3;
+    optional string university = 4;
+    optional int32 year = 5;
+    optional int32 group = 6;
+    optional string major = 7;
+    optional string department = 8;
+    optional string title = 9;
 }
 
 message LoginRequest 
@@ -50,21 +58,41 @@ message LoginRequest
     string password = 2;
 }
 
-message UsersExcelRequest
+message RegisterFromExcelRequest
 {
     string fileName = 1;
 }
    
 message DeleteAccountRequest 
 {
-  string userId = 1;
+    string userId = 1;
 }
 
 message ResetPasswordRequest 
 {
-  string email = 1;
+    string email = 1;
 }
 message GetAllUsersRequest 
 {
-  string placeholder = 1;
+    string placeholder = 1;
+}
+
+message UpdateUserRequest
+{
+    string email = 1;
+    optional string name = 2;
+    optional string role = 3;
+    optional string university = 4;
+    optional int32 year = 5;
+    optional int32 group = 6;
+    optional string major = 7;
+    optional string dormitory = 8;
+    optional string room = 9;
+    optional string department = 10;
+    optional string title = 11;
+}
+
+message UpdateFromExcelRequest
+{
+    string fileName = 1;
 }

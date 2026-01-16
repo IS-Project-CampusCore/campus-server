@@ -1,18 +1,17 @@
 ﻿using commons.Protos;
 using http.Auth;
+using http.Endpoints.Users;
 using usersServiceClient;
 
 namespace http.Endpoints.Users;
 
-public record FileRequest(string FileName);
-
-public class RegisterFromExcel(ILogger<RegisterFromExcel> logger) : CampusEndpoint<FileRequest>(logger)
+public class UpdateFromExcel(ILogger<UpdateFromExcel> logger) : CampusEndpoint<FileRequest>(logger)
 {
     public usersService.usersServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
-        Post("api/users/register-excel");
+        Post("api/users/update-excel");
 
         Policies(CampusPolicy.AuthenticatedUser);
         Roles("management");
@@ -26,13 +25,13 @@ public class RegisterFromExcel(ILogger<RegisterFromExcel> logger) : CampusEndpoi
             return;
         }
 
-        var grpcRequest = new RegisterFromExcelRequest
+        var grpcRequest = new UpdateFromExcelRequest
         {
             FileName = req.FileName
-           
+
         };
 
-        MessageResponse grpcResponse = await Client.RegisterUsersFromExcelAsync(grpcRequest, null, null, cancellationToken);
+        MessageResponse grpcResponse = await Client.UpdateUsersFromExcelAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(grpcResponse, cancellationToken);
     }
 }

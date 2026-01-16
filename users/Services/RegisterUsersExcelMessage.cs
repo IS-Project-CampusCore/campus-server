@@ -8,12 +8,12 @@ using usersServiceClient;
 namespace users.Services;
 
 public class RegisterUserExcelMessage(
-    ILogger<LoginMessage> logger,
+    ILogger<RegisterUserExcelMessage> logger,
     IUsersServiceImplementation implementation
-) : CampusMessage<UsersExcelRequest, BulkRegisterResponse>(logger)
+) : CampusMessage<RegisterFromExcelRequest, BulkResponse>(logger)
 {
     private readonly IUsersServiceImplementation _implementation = implementation;
 
-    protected override async Task<BulkRegisterResponse> HandleMessage(UsersExcelRequest request, CancellationToken token) =>
+    protected override async Task<BulkResponse> HandleMessage(RegisterFromExcelRequest request, CancellationToken token) =>
         await _implementation.BulkRegisterAsync(request.FileName);
 }

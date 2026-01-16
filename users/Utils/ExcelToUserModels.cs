@@ -8,7 +8,7 @@ public static class ExcelToUserModels
 {
     private static readonly string[] s_excelHeader = { "Email", "Name", "Role", "University", "Year", "Group", "Major", "Department", "Title" };
 
-    public static (List<User>, List<string>) ConvertToUserModels(ExcelData excelData)
+    public static (List<User>, List<string>) ConvertToUserModels(ExcelData excelData, bool requireName = true, bool requireRole = true)
     {
         var users = new List<User>();
         var errors = new List<string>();
@@ -41,7 +41,7 @@ public static class ExcelToUserModels
                 errors.Add(FieldError("Role", rowNr, headerMap["Role"] + 1));
             }
 
-            if (string.IsNullOrEmpty(emailValue) || string.IsNullOrEmpty(nameValue) || string.IsNullOrEmpty(roleString))
+            if (string.IsNullOrEmpty(emailValue) || (string.IsNullOrEmpty(nameValue) && requireName) || (string.IsNullOrEmpty(roleString) && requireRole))
                 continue;
 
             UserType role = User.StringToRole(roleString);
@@ -141,7 +141,6 @@ public static class ExcelToUserModels
                             Name = nameValue,
                             Role = role,
                             University = university,
-                            Subjects = [],
                             Department = department,
                             Title = title
                         };

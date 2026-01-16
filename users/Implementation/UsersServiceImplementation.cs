@@ -7,7 +7,9 @@ using emailServiceClient;
 using excelServiceClient;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using System.Data;
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -22,13 +24,16 @@ namespace users.Implementation;
 public interface IUsersServiceImplementation
 {
     public Task<User?> GetUserById(string id);
-    public Task<User?> RegisterUser(string email, string name, UserType role);
+    public Task<User?> GetUserByEmail(string email);
+    public Task<User?> RegisterUser(string email, string name, UserType role, string? university, int? year, int? group, string? major, string? department, string? title);
     public Task<UserWithJwt> AuthUser(string email, string password);
     public Task<UserWithJwt> Verify(string email, string password, string verifyCode);
-    public Task<BulkRegisterResponse> BulkRegisterAsync(string fileName);
+    public Task<BulkResponse> BulkRegisterAsync(string fileName);
     public Task ResendVerifyCode(string email);
     Task DeleteAccount(string userId);
     Task ResetPassword(string email);
+    Task<User?> UpdateUserAsync(string email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title);
+    public Task<BulkResponse> BulkUpdateAsync(string fileName);
 
     Task<List<User>> GetAllUsers();
 }
@@ -55,11 +60,16 @@ public class UsersServiceImplementation(
         return await users.MongoCollection.Find(_ => true).ToListAsync();
     }
 
-    private static string[] s_registerParametersType = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
+    private static string[] s_userInfoTypes = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
     {
         var users = await _usersCollection;
         return await users.GetOneByIdAsync(id);
+    }
+    public async Task<User?> GetUserByEmail(string email)
+    {
+        var users = await _usersCollection;
+        return await users.GetOneAsync(u => u.Email == email);
     }
 
     public async Task<UserWithJwt> AuthUser(string email, string password)
@@ -84,14 +94,23 @@ public class UsersServiceImplementation(
         }
 
         user.LastLoginAt = DateTime.UtcNow;
-        await UpdateUser(user);
+        await UpdateUserAsync(user);
 
         _logger.LogInformation($"User:{user.Id} has been authenticated");
         return new UserWithJwt(user, GenerateJwtToken(user.Id, user.Email, user.Name, user.Role));
     }
 
-    public async Task<User?> RegisterUser(string email, string name, UserType role) 
-        => await RegisterUser(new User { Email =  email, Name = name, Role = role });
+    public async Task<User?> RegisterUser(string email, string name, UserType role, string? university, int? year, int? group, string? major, string? department, string? title)
+    {
+        User? user = NewUserFromData(email, name, role, university, year, group, major, null, null, department, title);
+        if (user is null)
+        {
+            _logger.LogError("Invalid user data");
+            throw new BadRequestException("Invalid user data");
+        }
+        return await RegisterUser(user);
+    }
+
     private async Task<User?> RegisterUser(User newUser)
     {
         if (!IsValidEmail(newUser.Email))
@@ -114,7 +133,7 @@ public class UsersServiceImplementation(
 
         await StoreVerifyCode(newUser.Id, verifyCode);
 
-        //await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
+        await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
 
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
@@ -178,7 +197,7 @@ public class UsersServiceImplementation(
             user.PasswordHash = passwordHash;
             user.IsVerified = true;
 
-            await UpdateUser(user);
+            await UpdateUserAsync(user);
 
             return new UserWithJwt(user, GenerateJwtToken(user.Id, email, user.Name, user.Role));
         }
@@ -237,7 +256,7 @@ public class UsersServiceImplementation(
         await SendVerifyEmail(user.Email, user.Name, codeToSend);
     }
 
-    public async Task<BulkRegisterResponse> BulkRegisterAsync(string fileName)
+    public async Task<BulkResponse> BulkRegisterAsync(string fileName)
     {
         if (fileName is null) throw new BadRequestException("No file selected");
 
@@ -246,7 +265,7 @@ public class UsersServiceImplementation(
             FileName = fileName
         };
 
-        request.CellTypes.AddRange(s_registerParametersType);
+        request.CellTypes.AddRange(s_userInfoTypes);
 
         var response = await _excelService.ParseExcelAsync(request);
 
@@ -294,27 +313,111 @@ public class UsersServiceImplementation(
         int total = users.Count;
         int registered = 0;
         int skiped = 0;
-        List<RegisterResult> results = [];
+        List<PerUserResult> results = [];
 
         foreach (var user in users)
         {
             try
             {
                 User? newUser = await RegisterUser(user);
-                results.Add(new RegisterResult(newUser!.Email));
+                results.Add(new PerUserResult(newUser!.Email));
                 registered++;
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
-                results.Add(new RegisterResult(user.Email, ex.Message));
+                results.Add(new PerUserResult(user.Email, ex.Message));
                 skiped++;
             }
         }
-        return new BulkRegisterResponse
+        return new BulkResponse
         {
             TotalCount = total,
-            RegisteredCount = registered,
+            SuccessCount = registered,
+            SkipedCount = skiped,
+            Results = results
+        };
+    }
+
+    public async Task<BulkResponse> BulkUpdateAsync(string fileName)
+    {
+        if (fileName is null) 
+            throw new BadRequestException("No file selected");
+
+        var request = new ParseExcelRequest
+        {
+            FileName = fileName
+        };
+
+        request.CellTypes.AddRange(s_userInfoTypes);
+
+        var response = await _excelService.ParseExcelAsync(request);
+
+        if (!response.Success)
+            throw new InternalErrorException(response.Errors);
+
+        if (string.IsNullOrEmpty(response.Body))
+            throw new BadRequestException("Empty excel file");
+
+        var payload = response.Payload;
+        IEnumerable<string>? errors = payload.TryGetArray("Errors")?.IterateStrings();
+
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        ExcelData? data = response.GetPayload<ExcelData>();
+        if (data is null)
+        {
+            _logger.LogError("Excel data was corrupted");
+            throw new InternalErrorException("Corrupted excel data");
+        }
+
+        List<User> users;
+        try
+        {
+            (users, errors) = ExcelToUserModels.ConvertToUserModels(data, false, false);
+        }
+        catch (ServiceMessageException ex)
+        {
+            _logger.LogError(ex, $"Convert to User model failed with Exception:{ex.GetType().Name}, Msg:{ex.Message}");
+            throw new BadRequestException(ex.Message);
+        }
+
+        if (errors is not null && errors.Any())
+        {
+            string aggregatedErrors = string.Join("\n", errors);
+            _logger.LogError($"Excel parsing failed with {errors.Count()} errors for file {fileName}");
+            throw new BadRequestException(aggregatedErrors);
+        }
+
+        int total = users.Count;
+        int registered = 0;
+        int skiped = 0;
+        List<PerUserResult> results = [];
+
+        foreach (var user in users)
+        {
+            try
+            {
+                User? newUser = await UpdateUserAsync(user.Email, user);
+                results.Add(new PerUserResult(newUser!.Email));
+                registered++;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Request(Email:{user.Email}) exit with Error:{ex.Message}");
+                results.Add(new PerUserResult(user.Email, ex.Message));
+                skiped++;
+            }
+        }
+        return new BulkResponse
+        {
+            TotalCount = total,
+            SuccessCount = registered,
             SkipedCount = skiped,
             Results = results
         };
@@ -340,6 +443,84 @@ public class UsersServiceImplementation(
         await SendVerifyEmail(user.Email, user.Name, verfiyCode);
     }
 
+    public async Task<User?> UpdateUserAsync(string email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title)
+    {
+        var users = await _usersCollection;
+        User? user = await users.GetOneAsync(u => u.Email == email);
+        if (user is null)
+        {
+            _logger.LogError($"User with Email:{email} was not found.");
+            throw new NotFoundException("User not found");
+        }
+
+        name ??= user.Name;
+        role ??= user.Role;
+
+        if (user is Communicator communicator)
+        {
+            university ??= communicator.University;
+        }
+
+        if (user is Professor professor)
+        {
+            department ??= professor.Department;
+            title ??= professor.Title;
+        }
+
+        if (user is Student student)
+        {
+            year ??= student.Year;
+            group ??= student.Group;
+            major ??= student.Major;
+        }
+
+        if(user is CampusStudent campusStudent)
+        {
+            dormitory ??= campusStudent.Dormitory;
+            room ??= campusStudent.Room;
+        }
+
+        User? updatedUser = NewUserFromData(email, name, role, university, year, group, major, dormitory, room, department, title);
+        if (updatedUser is null)
+        {
+            _logger.LogError("Could not update User");
+            throw new InternalErrorException("Could not update user");
+        }
+
+        return await UpdateUserAsync(email, updatedUser);
+    }
+
+    private async Task<User> UpdateUserAsync(string email, User updatedUser)
+    {
+        var users = await _usersCollection;
+        User? user = await users.GetOneAsync(u => u.Email == email);
+        if (user is null)
+        {
+            _logger.LogError($"User was not found.");
+            throw new NotFoundException("User not found");
+        }
+
+        updatedUser.Id = user.Id;
+        updatedUser.IsVerified = user.IsVerified;
+        updatedUser.PasswordHash = user.PasswordHash;
+        updatedUser.CreatedAt = user.CreatedAt;
+        updatedUser.LastLoginAt = user.LastLoginAt;
+
+        await users.ReplaceAsync(updatedUser);
+        return updatedUser;
+    }
+
+    private async Task<User> UpdateUserAsync(User userToUpdate)
+    {
+        var db = await _usersCollection;
+        if (!await db.ExistsAsync(u => u.Id == userToUpdate.Id))
+        {
+            throw new NotFoundException($"User not found");
+        }
+        await db.ReplaceAsync(userToUpdate);
+        return userToUpdate;
+    }
+
     private bool IsValidEmail(string email)
     {
 
@@ -357,17 +538,6 @@ public class UsersServiceImplementation(
     {
         var db = await _usersCollection;
         return await db.GetOneAsync(x => x.Email == email);
-    }
-
-    private async Task<User> UpdateUser(User userToUpdate)
-    {
-        var db = await _usersCollection;
-        if (!await db.ExistsAsync(u => u.Id == userToUpdate.Id))
-        {
-            throw new NotFoundException($"User not found");
-        }
-        await db.ReplaceAsync(userToUpdate);
-        return userToUpdate;
     }
 
     private string GenerateVerifyCode() => RandomNumberGenerator.GetInt32(0, 10000).ToString("D4");
@@ -437,6 +607,125 @@ public class UsersServiceImplementation(
     private string HashPassword(string password) => BCrypt.Net.BCrypt.HashPassword(password, 13);
 
     private bool VerifyPassword(string password, string passwordHash) => BCrypt.Net.BCrypt.Verify(password, passwordHash);
+
+    private static User? NewUserFromData(string? email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title)
+    {
+        switch (role)
+        {
+            case UserType.CAMPUS_STUDENT:
+                return NewCampusStudentFromData(email, name, university, year, group, major, dormitory, room);
+            case UserType.STUDENT:
+                return NewStudentFromData(email, name, university, year, group, major);
+            case UserType.PROFESSOR:
+                return NewProfessorFromData(email, name, university, department, title);
+            case UserType.MANAGEMENT:
+                return NewManagementFromData(email, name);
+            case UserType.ADMIN:
+                return NewAdminFromData(email, name);
+            case UserType.GUEST:
+                return NewUserFromData(email, name);
+            default:
+                return null;
+        }
+    }
+
+    private static CampusStudent? NewCampusStudentFromData(string? email, string? name, string? university, int? year, int? group, string? major, string? dormitory, string? room)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || !year.HasValue || !group.HasValue || string.IsNullOrEmpty(major))
+            return null;
+
+        return new CampusStudent
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.CAMPUS_STUDENT,
+            University = university,
+            Year = year.Value,
+            Group = group.Value,
+            Major = major,
+            Dormitory = dormitory,
+            Room = room
+        };
+    }
+
+    private static Student? NewStudentFromData(string? email, string? name, string? university, int? year, int? group, string? major)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || !year.HasValue || !group.HasValue || string.IsNullOrEmpty(major))
+            return null;
+
+        return new Student
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.STUDENT,
+            University = university,
+            Year = year.Value,
+            Group = group.Value,
+            Major = major
+        };
+    }
+
+    private static Professor? NewProfessorFromData(string? email, string? name, string? university, string? department, string? title)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        if (string.IsNullOrEmpty(university) || string.IsNullOrEmpty(department) || string.IsNullOrEmpty(title))
+            return null;
+
+        return new Professor
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.PROFESSOR,
+            University = university,
+            Department = department,
+            Title = title
+        };
+    }
+
+    private static Management? NewManagementFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Management
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.MANAGEMENT
+        };
+    }
+    private static Admin? NewAdminFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Admin
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.ADMIN
+        };
+    }
+    private static User? NewUserFromData(string? email, string? name)
+    {
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(name))
+            return null;
+
+        return new Admin
+        {
+            Email = email,
+            Name = name,
+            Role = UserType.GUEST
+        };
+    }
 
     private string GenerateJwtToken(string userId, string userEmail, string userName, UserType role)
     {
