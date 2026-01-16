@@ -24,6 +24,9 @@ namespace users.Implementation;
 public interface IUsersServiceImplementation
 {
     public Task<User?> GetUserById(string id);
+    Task<List<User>> GetAllUsers();
+    Task<List<User>> GetUsersByRole(UserType role);
+    Task<List<User>> GetUsersByUniversity(string university);
     public Task<User?> GetUserByEmail(string email);
     public Task<User?> RegisterUser(string email, string name, UserType role, string? university, int? year, int? group, string? major, string? department, string? title);
     public Task<UserWithJwt> AuthUser(string email, string password);
@@ -34,8 +37,6 @@ public interface IUsersServiceImplementation
     Task ResetPassword(string email);
     Task<User?> UpdateUserAsync(string email, string? name, UserType? role, string? university, int? year, int? group, string? major, string? dormitory, string? room, string? department, string? title);
     public Task<BulkResponse> BulkUpdateAsync(string fileName);
-
-    Task<List<User>> GetAllUsers();
 }
 
 public class UsersServiceImplementation(
@@ -54,22 +55,38 @@ public class UsersServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
 
+    private static string[] s_userInfoTypes = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
+
     public async Task<List<User>> GetAllUsers()
     {
         var users = await _usersCollection;
         return await users.MongoCollection.Find(_ => true).ToListAsync();
     }
 
-    private static string[] s_userInfoTypes = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
     public async Task<User?> GetUserById(string id)
     {
         var users = await _usersCollection;
         return await users.GetOneByIdAsync(id);
     }
+
     public async Task<User?> GetUserByEmail(string email)
     {
         var users = await _usersCollection;
         return await users.GetOneAsync(u => u.Email == email);
+    }
+
+    public async Task<List<User>> GetUsersByRole(UserType role)
+    {
+        var users = await _usersCollection;
+        return await users.MongoCollection.Find(u => u.Role == role).ToListAsync();
+    }
+
+    public async Task<List<User>> GetUsersByUniversity(string university)
+    {
+        var users = await _usersCollection;
+
+        var filter = Builders<User>.Filter.OfType<Communicator>(c => c.University == university);
+        return await users.MongoCollection.Find(filter).ToListAsync();
     }
 
     public async Task<UserWithJwt> AuthUser(string email, string password)

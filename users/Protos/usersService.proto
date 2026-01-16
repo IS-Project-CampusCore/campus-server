@@ -10,6 +10,8 @@ service usersService
 { 
     rpc GetUserById (UserIdRequest) returns (commons.protos.MessageResponse);
     rpc GetAllUsers (GetAllUsersRequest) returns (commons.protos.MessageResponse);
+    rpc GetUsersByRole (UsersRoleRequest) returns (commons.protos.MessageResponse);
+    rpc GetUsersByUniversity (UsersUniversityRequest) returns (commons.protos.MessageResponse);
 
     rpc Verify (VerifyRequest) returns (commons.protos.MessageResponse);
     rpc Login (LoginRequest) returns (commons.protos.MessageResponse);
@@ -26,6 +28,16 @@ service usersService
 message UserIdRequest
 {
     string id = 1;
+}
+
+message UsersRoleRequest
+{
+    string role = 1;
+}
+
+message UsersUniversityRequest
+{
+    string university = 1;
 }
 
 message VerifyRequest
