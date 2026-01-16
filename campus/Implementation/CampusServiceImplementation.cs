@@ -7,6 +7,7 @@ using emailServiceClient;
 using excelServiceClient;
 using MongoDB.Driver;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using usersServiceClient;
 
 namespace campus.Implementation;
@@ -16,7 +17,7 @@ public interface ICampusService
 {
     Task<Accommodation> CreateAccommodationAsync(string name, string description, int openTime, int closeTime);
     Task GenerateDistributionAsync(string placeholder);
-    Task<Payment> CreatePaymentAsync(string userId, double amount);
+    Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv);
     Task<Issue> ReportIssueAsync(string issuerId, string location, string description);
 }
 public class CampusServiceImplementation(
@@ -42,19 +43,71 @@ public class CampusServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<Issue>> _issues = new(() => GetIssuesCollection(database));
 
 
+    public async Task<Scheddule?> GetAccommodationScheduleById(string id)
+    {
+        var col = await _accommodations;
+        
+        
+        var accommodation = await col.GetOneByIdAsync(id);
+        if (accommodation is null)
+        {
+            _logger.LogInformation("GetAccommodationSchedule: accommodation not found for Id:{Id}", id);
+            throw new NotFoundException("Accommodation not found");
+        }
 
+        return accommodation.Timetable;
+        
+    }
 
+    public async Task<Accommodation?> GetAccommodationById(string id)
+    {
+        var db = await _accommodations;
+        try
+        {
+            return await db.GetOneByIdAsync(id);
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetAccommodations failed");
+            throw new InternalErrorException("Failed to retrieve accommodation");
+        }
+    }
+
+    public async Task<List<Accommodation>> GetAccommodations()
+    {
+        var col = await _accommodations;
+        try
+        {
+            return await col.MongoCollection.Find(_ => true).ToListAsync();
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetAccommodations failed");
+            throw new InternalErrorException("Failed to retrieve accommodations");
+        }
+    }
 
     public async Task GenerateDistributionAsync(string placeholder)
     {
-       
+        var excelData = await ParseAndValidateExcelAsync(placeholder);
+        var dormitoriesCol = await _dormitories;
+        var roomsCol = await _rooms;
+        await SeedDormitoriesAndRoomsAsync(excelData, dormitoriesCol, roomsCol);
+
+        await AssignStudentsToRoomsAsync(roomsCol);
+    }
+
+    private async Task<ExcelData> ParseAndValidateExcelAsync(string placeholder)
+    {
         var exactTypes = new List<string>
         {
-            "String", 
-            "String", 
-            "Double", 
-            "Double", 
-            "Double"  
+            "String",
+            "String",
+            "Double",
+            "Double",
+            "Double"
         };
 
         var finalReq = new ParseExcelRequest { FileName = placeholder };
@@ -86,47 +139,51 @@ public class CampusServiceImplementation(
 
         if (excelData.Errors is { Count: > 0 })
         {
+            var stringErrors = string.Join("; ", excelData.Errors);
             foreach (var e in excelData.Errors)
                 _logger.LogWarning("Excel parse warning: {Err}", e);
+            throw new BadRequestException("Excel parse errors: " + stringErrors);
         }
 
-        var dormitoriesCol = await _dormitories;
-        var roomsCol = await _rooms;
+        return excelData;
+    }
 
-        var dormCache = new Dictionary<string, Dormitory>(StringComparer.OrdinalIgnoreCase);
-
-        static string? CellToString(object? v)
+    private static string? CellToString(object? v)
+    {
+        if (v is null) return null;
+        if (v is JsonElement je)
         {
-            if (v is null) return null;
-            if (v is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.String) return je.GetString();
-                if (je.ValueKind == JsonValueKind.Number) return je.GetRawText();
-                if (je.ValueKind == JsonValueKind.True) return "true";
-                if (je.ValueKind == JsonValueKind.False) return "false";
-                return je.ToString();
-            }
-            return v.ToString();
+            if (je.ValueKind == JsonValueKind.String) return je.GetString();
+            if (je.ValueKind == JsonValueKind.Number) return je.GetRawText();
+            if (je.ValueKind == JsonValueKind.True) return "true";
+            if (je.ValueKind == JsonValueKind.False) return "false";
+            return je.ToString();
         }
+        return v.ToString();
+    }
 
-        static bool TryCellToInt(object? v, out int result)
+    private static bool TryCellToInt(object? v, out int result)
+    {
+        result = 0;
+        if (v is null) return false;
+        if (v is JsonElement je)
         {
-            result = 0;
-            if (v is null) return false;
-            if (v is JsonElement je)
-            {
-                if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out result)) return true;
-                if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out result)) return true;
-                return false;
-            }
-            if (v is int i) { result = i; return true; }
-            if (v is long l) { result = (int)l; return true; }
-            if (v is double d) { result = Convert.ToInt32(d); return true; }
-            if (v is string s && int.TryParse(s, out result)) return true;
+            if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out result)) return true;
+            if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out result)) return true;
             return false;
         }
+        if (v is int i) { result = i; return true; }
+        if (v is long l) { result = (int)l; return true; }
+        if (v is double d) { result = Convert.ToInt32(d); return true; }
+        if (v is string s && int.TryParse(s, out result)) return true;
+        return false;
+    }
 
+    private async Task SeedDormitoriesAndRoomsAsync(ExcelData excelData, IDatabaseCollection<Dormitory> dormitoriesCol, IDatabaseCollection<Room> roomsCol)
+    {
+        var dormCache = new Dictionary<string, Dormitory>(StringComparer.OrdinalIgnoreCase);
         int rowIndex = 0;
+
         foreach (var row in excelData.Rows)
         {
             rowIndex++;
@@ -140,7 +197,7 @@ public class CampusServiceImplementation(
 
             var dormNameCell = row[0];
             var dormAddrCell = row[1];
-            var amountCell = row[2]; 
+            var amountCell = row[2];
             var roomNumberCell = row[3];
             var capacityCell = row[4];
 
@@ -150,7 +207,7 @@ public class CampusServiceImplementation(
             if (!TryCellToInt(roomNumberCell?.Value, out var roomNumberInt))
             {
                 _logger.LogInformation("Skipping row {Row}: invalid room number (must be numeric)", rowIndex + 1);
-                continue;
+                throw new BadRequestException("Invalid room number");
             }
 
             string roomNumber = roomNumberInt.ToString();
@@ -158,19 +215,19 @@ public class CampusServiceImplementation(
             if (!TryCellToInt(capacityCell?.Value, out var capacity))
             {
                 _logger.LogInformation("Skipping row {Row}: invalid capacity (must be numeric)", rowIndex + 1);
-                continue;
+                throw new BadRequestException("Invalid capacity");
             }
 
             if (!TryCellToInt(amountCell?.Value, out var amountInt))
             {
                 _logger.LogInformation("Skipping row {Row}: invalid amount", rowIndex + 1);
-                continue;
+                throw new BadRequestException("Invalid amount");
             }
 
             if (string.IsNullOrWhiteSpace(dormName))
             {
                 _logger.LogInformation("Skipping row {Row}: dormitory name missing", rowIndex + 1);
-                continue;
+                throw new BadRequestException("Dormitory name missing");
             }
 
             string dormKey = $"{dormName.Trim().ToLowerInvariant()}|{(dormAddr ?? string.Empty).Trim().ToLowerInvariant()}";
@@ -213,8 +270,10 @@ public class CampusServiceImplementation(
             await roomsCol.InsertAsync(room);
             _logger.LogInformation("Created Room {Room} in Dormitory {Dorm} (Capacity: {Cap})", roomNumber, dorm.Name, capacity);
         }
+    }
 
-
+    private async Task AssignStudentsToRoomsAsync(IDatabaseCollection<Room> roomsCol)
+    {
         var allUsers = await FetchAllUsers();
 
         var allRooms = await roomsCol.MongoCollection
@@ -233,7 +292,7 @@ public class CampusServiceImplementation(
 
         var homelessStudentIds = allUsers?
                     .Where(u => string.Equals(u.RoleString, "5", StringComparison.OrdinalIgnoreCase)
-                                && !assignedStudentIds.Contains(u.Id)) 
+                                && !assignedStudentIds.Contains(u.Id))
                     .Select(u => u.Id)
                     .ToList() ?? new List<string?>();
 
@@ -266,17 +325,15 @@ public class CampusServiceImplementation(
                 shuffledStudents.RemoveAt(0);
             }
 
-
-           
             if (roomWasModified)
             {
                 await roomsCol.ReplaceAsync(currentRoom);
             }
-            
         }
+
         if (roomQueue.Count == 0 && shuffledStudents.Count >= 0)
         {
-            throw new BadRequestException($"The Dormitories are full! students without a room left {shuffledStudents.Count}" );
+            throw new BadRequestException($"The Dormitories are full! students without a room left {shuffledStudents.Count}");
         }
 
         _logger.LogInformation("Distribution Complete. Assigned {Assigned} new students. Rooms total: {Rooms}", assignedCount, allRooms.Count);
@@ -398,7 +455,71 @@ public class CampusServiceImplementation(
         return issue;
     }
 
-    public async Task<Payment> CreatePaymentAsync(string userId, double amount)
+    public bool IsCardNumberFormatValid(string cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber)) return false;
+
+        string cleanNumber = cardNumber.Replace(" ", "").Replace("-", "");
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cleanNumber, @"^\d{16}$");
+    }
+
+    public bool IsLuhnValid(string cardNumber)
+    {
+        int sum = 0;
+        bool alternate = false;
+        for (int i = cardNumber.Length - 1; i >= 0; i--)
+        {
+            char c = cardNumber[i];
+            if (!char.IsDigit(c)) return false; 
+
+            int n = c - '0'; 
+
+            if (alternate)
+            {
+                n *= 2;
+                if (n > 9) n -= 9; 
+            }
+
+            sum += n;
+            alternate = !alternate;
+        }
+
+        return (sum % 10 == 0);
+    }
+
+    public bool IsCvvValid(string cvv)
+    {
+        if (string.IsNullOrWhiteSpace(cvv)) return false;
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cvv.Trim(), @"^\d{3}$");
+    }
+
+    public bool IsNotExpired(string expirationString)
+    {
+        if (string.IsNullOrWhiteSpace(expirationString)) return false;
+
+        expirationString = expirationString.Trim();
+
+        var parts = expirationString.Split('/');
+        if (parts.Length != 2) return false; 
+
+        if (!int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
+        {
+            return false; 
+        }
+
+        if (month < 1 || month > 12) return false;
+
+        int fullYear = year < 100 ? 2000 + year : year;
+
+        int lastDay = DateTime.DaysInMonth(fullYear, month);
+        var cardExpiry = new DateTime(fullYear, month, lastDay, 23, 59, 59);
+
+        return cardExpiry > DateTime.Now;
+    }
+
+    public async Task<Payment> CreatePaymentAsync(string userId, double amount,string cardNumber,string expDate,string cvv)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -410,6 +531,26 @@ public class CampusServiceImplementation(
         {
             _logger.LogInformation("CreatePayment failed: invalid amount {Amount}", amount);
             throw new BadRequestException("Amount must be greater than zero");
+        }
+        if (!IsCardNumberFormatValid(cardNumber))
+        {
+            _logger.LogInformation("CreatePayment failed: invalid card number format");
+            throw new BadRequestException("Invalid card number format");
+        }
+        if (!IsLuhnValid(cardNumber))
+        {
+            _logger.LogInformation("CreatePayment failed: card number failed Luhn check");
+            throw new BadRequestException("Invalid card number");
+        }
+        if (!IsCvvValid(cvv))
+        {
+            _logger.LogInformation("CreatePayment failed: invalid CVV");
+            throw new BadRequestException("Invalid CVV");
+        }
+        if (!IsNotExpired(expDate))
+        {
+            _logger.LogInformation("CreatePayment failed: card is expired");
+            throw new BadRequestException("Card is expired");
         }
 
         var getUserRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = userId });
@@ -429,13 +570,18 @@ public class CampusServiceImplementation(
         }
         catch { /* ignore - fallback to default */ }
 
-        try
+        
+        
+        var maybeEmail = payload.GetString("Email");
+        if (!string.IsNullOrWhiteSpace(maybeEmail))
         {
-            var maybeEmail = payload.GetString("Email");
-            if (!string.IsNullOrWhiteSpace(maybeEmail))
-                userEmail = maybeEmail;
+            userEmail = maybeEmail;
         }
-        catch { /* ignore - fallback to example email */ }
+        else
+        {
+            throw new BadRequestException("The user doesn't have an email set!");
+        }        
+        
 
         var payment = new Payment
         {

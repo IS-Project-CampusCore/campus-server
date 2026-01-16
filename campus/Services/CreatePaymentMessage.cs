@@ -13,5 +13,5 @@ public class CreatePaymentMessage(
     private readonly CampusServiceImplementation _impl = implementation;
 
     protected override async Task<Payment> HandleMessage(CreatePaymentRequest request, CancellationToken token) 
-        => await _impl.CreatePaymentAsync(request.UserId,request.Amount);
+        => await _impl.CreatePaymentAsync(request.UserId,request.Amount,request.CardNumber,request.ExpiryDate,request.Cvv);
 }

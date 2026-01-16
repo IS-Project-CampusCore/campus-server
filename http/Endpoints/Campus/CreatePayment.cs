@@ -44,7 +44,11 @@ public class CreatePayment(ILogger<CreatePayment> logger) : CampusEndpoint<Creat
         var grpcRequest = new CreatePaymentRequest
         {
             UserId = userId,
-            Amount = req.Amount
+            Amount = req.Amount,
+            CardNumber = req.CardData.CardNumber,
+            ExpiryDate = req.CardData.ExpDate,
+            Cvv = req.CardData.CVV
+
         };
 
         // Optional: log receipt of card data (do NOT log sensitive card numbers in production)

@@ -22,7 +22,7 @@ public class CreateAccommodation(ILogger<CreateAccommodation> logger) : CampusEn
         Post("api/campus/create-accommodation");
         Policies(CampusPolicy.AuthenticatedUser);
 
-        Roles("management", "professor");
+        Roles("management");
     }
 
     public override async Task HandleAsync(CreateAccommodationReq req, CancellationToken cancellationToken)
