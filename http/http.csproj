@@ -33,5 +33,6 @@
     <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\emailService.proto" />
     <Protobuf Include="..\chat\Protos\chatService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\chatService.proto" />
     <Protobuf Include="..\announcements\Protos\announcementsService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\announcementsService.proto" />
+    <Protobuf Include="..\grades\Protos\gradesService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\gradesService.proto" />
   </ItemGroup>
 </Project>

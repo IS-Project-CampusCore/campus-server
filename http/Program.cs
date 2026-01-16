@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
 using usersServiceClient;
+using gradesServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -57,6 +58,12 @@ builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
 builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:AnnouncementsService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<gradesService.gradesServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:GradesService"];
     o.Address = new Uri(address!);
 });
 
