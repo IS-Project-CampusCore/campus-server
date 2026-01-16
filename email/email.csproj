@@ -43,6 +43,12 @@
     <None Update="Templates\SystemMessage.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="Templates\Issue.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\Payment.html">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Templates\Announcement.html">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -27,6 +27,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Commons", "Commons", "{28FF
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "commons", "commons\commons.csproj", "{0EF5AE9C-13FC-48CD-9B28-765DE5F0504A}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "campus", "campus\campus.csproj", "{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -153,6 +155,18 @@ Global
 		{0EF5AE9C-13FC-48CD-9B28-765DE5F0504A}.Release|x64.Build.0 = Release|Any CPU
 		{0EF5AE9C-13FC-48CD-9B28-765DE5F0504A}.Release|x86.ActiveCfg = Release|Any CPU
 		{0EF5AE9C-13FC-48CD-9B28-765DE5F0504A}.Release|x86.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x64.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x86.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x64.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x64.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x86.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

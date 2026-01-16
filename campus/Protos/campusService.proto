@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "campusServiceClient";
+
+package campusService;
+
+
+service campusService
+{
+    rpc CreateAccommodation (CreateAccommodationRequest) returns (commons.protos.MessageResponse);
+
+    rpc GenerateDistribution (GenerateDistributionRequest) returns (commons.protos.MessageResponse);
+
+    rpc CreatePayment (CreatePaymentRequest) returns (commons.protos.MessageResponse);
+
+    rpc ReportIssue (ReportIssueRequest) returns (commons.protos.MessageResponse);
+}
+
+message CreateAccommodationRequest
+{
+    string name = 1;
+    string description = 2;
+    int32 openTime = 3; 
+    int32 closeTime = 4;
+}
+
+
+
+message GenerateDistributionRequest
+{
+    string placeholder = 1; 
+}
+
+message CreatePaymentRequest
+{
+    string userId = 1;
+    double amount = 2;
+    string cardNumber=3;
+    string expiryDate=4;
+    string cvv=5;
+}
+
+message ReportIssueRequest
+{
+    string issuerId = 1;
+    string location = 2; 
+    string description = 3;
+}

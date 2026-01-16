@@ -4,35 +4,33 @@
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>90e9bfe5-e32d-4109-a4ec-b57db8598b81</UserSecretsId>
     <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="FastEndpoints" Version="7.1.0" />
-    <PackageReference Include="FastEndpoints.Swagger" Version="7.1.0" />
-    <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+    <PackageReference Include="Google.Protobuf" Version="3.33.0" />
     <PackageReference Include="Grpc.Net.Client" Version="2.71.0" />
     <PackageReference Include="Grpc.Tools" Version="2.76.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.AspNetCore.Authentication" Version="2.3.0" />
-    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.10" />
+    <PackageReference Include="MediatR" Version="13.1.0" />
     <PackageReference Include="Microsoft.VisualStudio.Azure.Containers.Tools.Targets" Version="1.22.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="Serilog.Sinks.Console" Version="6.1.1" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
-    <ProjectReference Include="..\commons\commons.csproj" />
+    <ProjectReference Include="..\commons\commons.csproj">
+      <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
+    </ProjectReference>
   </ItemGroup>
 
   <ItemGroup>
+    <Protobuf Include="Protos\campusService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
     <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\usersService.proto" />
-    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\excelService.proto" />
     <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\emailService.proto" />
-    <Protobuf Include="..\chat\Protos\chatService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\chatService.proto" />
-    <Protobuf Include="..\announcements\Protos\announcementsService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\announcementsService.proto" />
-    <Protobuf Include="..\campus\Protos\campusService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\campusService.proto" />
+    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\excelService.proto" />
+
   </ItemGroup>
+
 </Project>
