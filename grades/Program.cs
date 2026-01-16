@@ -5,7 +5,6 @@ using grades.Implementation;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
-using emailServiceClient;
 using excelServiceClient;
 using usersServiceClient;
 
@@ -35,12 +34,6 @@ builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName)
 builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:UsersService"];
-    o.Address = new Uri(address!);
-});
-
-builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
-{
-    string? address = builder.Configuration["GrpcServices:EmailService"];
     o.Address = new Uri(address!);
 });
 

@@ -218,7 +218,6 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__UsersService=http://users:8080
-      - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=grades
@@ -228,6 +227,5 @@ services:
       - mongo
       - users
       - excel
-      - email 
     networks:
       - campus-network
