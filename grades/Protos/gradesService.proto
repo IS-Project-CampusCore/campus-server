@@ -1,0 +1,116 @@
+syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "gradesServiceClient";
+
+package gradesService;
+
+service gradesService
+{ 
+    rpc CreateCourse (CreateCourseRequest) returns (commons.protos.MessageResponse);
+    rpc AddStudent (AddStudentRequest) returns (commons.protos.MessageResponse);
+    rpc RemoveStudent (RemoveStudentRequest) returns (commons.protos.MessageResponse);
+    rpc EnrollToCourse (EnrollRequest) returns (commons.protos.MessageResponse);
+    
+    rpc AddStudentsFromExcel (AddFromExcelRequest) returns (commons.protos.MessageResponse);
+
+    rpc GetUserCourses (GetCoursesRequest) returns (commons.protos.MessageResponse);
+    rpc GetCourseByName (GetCourseByNameRequest) returns (commons.protos.MessageResponse);
+
+    rpc AddGrade (AddGradeRequest) returns (commons.protos.MessageResponse);
+    rpc UpdateGrade (UpdateGradeRequest) returns (commons.protos.MessageResponse);
+    rpc RemoveGrade (RemoveGradeRequest) returns (commons.protos.MessageResponse);
+
+    rpc GetGrades (GetGradesRequest) returns (commons.protos.MessageResponse);
+    
+    rpc AddGradesFromExcel (AddGradesFromExcelRequest) returns (commons.protos.MessageResponse);
+    rpc UpdateGradesFromExcel (UpdateGradesFromExcelRequest) returns (commons.protos.MessageResponse);
+}
+
+message CreateCourseRequest
+{
+  string professorId = 1;
+  string name = 2;
+  int32 year = 3;
+}
+
+message AddStudentRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string studentId = 3;
+}
+
+message RemoveStudentRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string studentId = 3;
+}
+
+message EnrollRequest
+{
+    string studentId = 1;
+    string courseKey = 2;
+}
+
+message AddFromExcelRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string fileName = 3;
+}
+
+message GetCoursesRequest
+{
+    string userId = 1;
+    bool isProfessor = 2;
+}
+
+message GetCourseByNameRequest
+{
+    string name = 1;
+}
+
+message AddGradeRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string studentId = 3;
+    double grade = 4;
+}
+
+message UpdateGradeRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string studentId = 3;
+    double grade = 4;
+}
+
+message RemoveGradeRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string studentId = 3;
+}
+
+message GetGradesRequest
+{
+    string studentId = 1;
+}
+
+message AddGradesFromExcelRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string fileName = 3;
+}
+
+message UpdateGradesFromExcelRequest
+{
+    string courseId = 1;
+    string professorId = 2;
+    string fileName = 3;
+}

@@ -15,6 +15,10 @@ public class UsersService(IMediator mediator) : usersService.usersServiceBase
     {
         return await _mediator.Send(request);
     }
+    public override async Task<MessageResponse> GetUserByEmail(UserEmailRequest request, ServerCallContext context)
+    {
+        return await _mediator.Send(request);
+    }
 
     public override async Task<MessageResponse> GetUsersByRole(UsersRoleRequest request, ServerCallContext context)
     {

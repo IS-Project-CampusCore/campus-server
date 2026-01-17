@@ -9,6 +9,7 @@ package usersService;
 service usersService
 { 
     rpc GetUserById (UserIdRequest) returns (commons.protos.MessageResponse);
+    rpc GetUserByEmail (UserEmailRequest) returns (commons.protos.MessageResponse);
     rpc GetAllUsers (GetAllUsersRequest) returns (commons.protos.MessageResponse);
     rpc GetUsersByRole (UsersRoleRequest) returns (commons.protos.MessageResponse);
     rpc GetUsersByUniversity (UsersUniversityRequest) returns (commons.protos.MessageResponse);
@@ -28,6 +29,11 @@ service usersService
 message UserIdRequest
 {
     string id = 1;
+}
+
+message UserEmailRequest
+{
+    string email = 1;
 }
 
 message UsersRoleRequest

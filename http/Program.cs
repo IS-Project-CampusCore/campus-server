@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
 using System.Net;
 using usersServiceClient;
+using gradesServiceClient;
+using scheduleServiceClient;
+using emailServiceClient;
 
 AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
@@ -37,7 +40,7 @@ builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
     o.Address = new Uri(address!);
 });
 
-builder.Services.AddGrpcClient<emailServiceClient.emailService.emailServiceClient>(o =>
+builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:EmailService"];
     o.Address = new Uri(address!);
@@ -58,6 +61,18 @@ builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
 builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:AnnouncementsService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<gradesService.gradesServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:GradesService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<scheduleService.scheduleServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:ScheduleService"];
     o.Address = new Uri(address!);
 });
 

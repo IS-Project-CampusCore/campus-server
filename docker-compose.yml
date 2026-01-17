@@ -45,6 +45,8 @@ services:
       - GrpcServices__ExcelService=http://excel:8080
       - GrpcServices__AnnouncementsService=http://announcements:8080
       - GrpcServices__ChatService=http://chat:8080 
+      - GrpcServices__GradesService=http://grades:8080 
+      - GrpcServices__ScheduleService=http://schedule:8080 
       - GrpcServices__CampusService=http://campus:8080 
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
@@ -60,6 +62,8 @@ services:
       - announcements
       - campus
       - seq
+      - grades 
+      - schedule
     networks:
       - campus-network
 
@@ -206,6 +210,44 @@ services:
       - mongo
       - users
       - email
+    networks:
+      - campus-network
+
+  grades:
+    build:
+      context: .
+      dockerfile: ./grades/Dockerfile
+    ports:
+      - "8089:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - GrpcServices__UsersService=http://users:8080
+      - GrpcServices__ExcelService=http://excel:8080
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=grades
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
+      - mongo
+      - users
+      - excel
+    networks:
+      - campus-network
+
+  schedule:
+    build:
+      context: .
+      dockerfile: ./schedule/Dockerfile
+    ports:
+      - "8090:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - GrpcServices__ExcelService=http://excel:8080
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=schedules
+      - Logging__SeqUrl=http://seq
+    depends_on:
+      - seq
     networks:
       - campus-network
 
