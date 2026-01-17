@@ -25,6 +25,7 @@ public interface IGradesService
     Task<Grade> AddGradeAsync(string courseId, string professorId, string studentId, double value);
     Task<Grade> UpdateGradeAsync(string courseId, string professorId, string studentId, double value);
     Task RemoveGradeAsync(string courseId, string professorId, string studentId);
+    Task<BulkResult<List<Grade>>> BulkGradesOperationAsync(string courseId, string professorId, string fileName, bool isInsert = false);
 }
 
 public class GradesServiceImplementation(
