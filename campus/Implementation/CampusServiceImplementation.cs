@@ -6,15 +6,17 @@ using commons.Tools;
 using emailServiceClient;
 using excelServiceClient;
 using MongoDB.Driver;
+using System;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using usersServiceClient;
-
 namespace campus.Implementation;
 
 
 public interface ICampusService
 {
+    Task<Scheddule?> GetAccommodationScheduleById(string id);
+    Task<List<Accommodation>> GetAccommodations();
+    Task<Accommodation?> GetAccommodationById(string id);
     Task<Accommodation> CreateAccommodationAsync(string name, string description, int openTime, int closeTime);
     Task GenerateDistributionAsync(string placeholder);
     Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv);
@@ -275,11 +277,51 @@ public class CampusServiceImplementation(
     private async Task AssignStudentsToRoomsAsync(IDatabaseCollection<Room> roomsCol)
     {
         var allUsers = await FetchAllUsers();
-
+      
         var allRooms = await roomsCol.MongoCollection
                                      .Find(_ => true)
                                      .ToListAsync();
 
+        var assignedStudentIdsFromRooms = allRooms
+            .SelectMany(r => r.MembersId)
+            .Where(id => !string.IsNullOrWhiteSpace(id))
+            .ToHashSet();
+
+
+        /*
+                // Prefer using CampusStudent.Dormitory/Room from users service
+                List<string> homelessStudentIds;
+                var campusStudents = allUsers?.OfType<CampusStudent>().ToList();
+
+                if (campusStudents is null || campusStudents.Count == 0)
+                {
+                    // Fallback: no users returned from service — fall back to DB-only approach (everyone not in rooms)
+                    _logger.LogWarning("No campus students returned from users service; falling back to DB membership check.");
+                    // If you have a list of all student IDs somewhere, you would subtract assignedStudentIdsFromRooms from that.
+                    // Here we have no full student list, so abort early to avoid assigning incorrectly.
+                    throw new InternalErrorException("Cannot generate distribution: no campus students available from users service.");
+                }
+                else
+                {
+                    // Students that report no room/dorm are considered homeless
+                    homelessStudentIds = campusStudents
+                        .Where(cs => string.IsNullOrWhiteSpace(cs.Dormitory) && string.IsNullOrWhiteSpace(cs.Room) && !string.IsNullOrWhiteSpace(cs.Id))
+                        .Select(cs => cs.Id!)
+                        .ToList();
+
+                    // Optional: detect mismatches where a user reports being assigned but DB doesn't contain them
+                    var reportedAssigned = campusStudents
+                        .Where(cs => !string.IsNullOrWhiteSpace(cs.Dormitory) || !string.IsNullOrWhiteSpace(cs.Room))
+                        .Select(cs => cs.Id!)
+                        .Where(id => !assignedStudentIdsFromRooms.Contains(id))
+                        .ToList();
+
+                    if (reportedAssigned.Count > 0)
+                    {
+                        _logger.LogWarning("Users service reports these students as assigned but rooms DB has no membership entries: {UserIds}", string.Join(",", reportedAssigned));
+                        // Decide whether to reconcile (e.g. add them to the rooms DB) or to ignore — here we only log.
+                    }
+                }*/
         if (allRooms.Count == 0)
         {
             _logger.LogError("GenerateDistribution failed: No rooms found in database. Excel seed may have failed.");
@@ -331,7 +373,7 @@ public class CampusServiceImplementation(
             }
         }
 
-        if (roomQueue.Count == 0 && shuffledStudents.Count >= 0)
+        if (shuffledStudents.Count > 0)
         {
             throw new BadRequestException($"The Dormitories are full! students without a room left {shuffledStudents.Count}");
         }
@@ -351,6 +393,88 @@ public class CampusServiceImplementation(
 
         return JsonSerializer.Deserialize<List<UserDto>>(response.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
     }
+
+    /*    private async Task<List<User>?> FetchAllUsers()
+        {
+            var responseByRole = await _usersService.GetUsersByRoleAsync(new UsersRoleRequest { Role = "campus_student" });
+
+            if (!responseByRole.Success || string.IsNullOrEmpty(responseByRole.Body))
+            {
+                _logger.LogWarning("Could not fetch users by role 'campus_student': {Errors}", responseByRole.Errors);
+                return null;
+            }
+
+            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            var users = new List<User>();
+
+            try
+            {
+                using var doc = JsonDocument.Parse(responseByRole.Body);
+                if (doc.RootElement.ValueKind != JsonValueKind.Array)
+                {
+                    _logger.LogWarning("Users response JSON is not an array");
+                    return users;
+                }
+
+                foreach (var el in doc.RootElement.EnumerateArray())
+                {
+                    bool isCampusStudent = false;
+
+                    if (el.TryGetProperty("Role", out var roleProp))
+                    {
+                        if (roleProp.ValueKind == JsonValueKind.String)
+                        {
+                            var rv = roleProp.GetString();
+                            if (!string.IsNullOrEmpty(rv) &&
+                                (rv.Equals("CAMPUS_STUDENT", StringComparison.OrdinalIgnoreCase) ||
+                                 rv.Equals("campus_student", StringComparison.OrdinalIgnoreCase)))
+                            {
+                                isCampusStudent = true;
+                            }
+                            else if (!isCampusStudent && int.TryParse(rv, out var rn) && rn == (int)UserType.CAMPUS_STUDENT)
+                            {
+                                isCampusStudent = true;
+                            }
+                        }
+                        else if (roleProp.ValueKind == JsonValueKind.Number && roleProp.TryGetInt32(out var rint))
+                        {
+                            if (rint == (int)UserType.CAMPUS_STUDENT) isCampusStudent = true;
+                        }
+                    }
+
+                    try
+                    {
+                        if (isCampusStudent)
+                        {
+                            var cs = JsonSerializer.Deserialize<CampusStudent>(el.GetRawText(), options);
+                            if (cs != null) users.Add(cs);
+                            else
+                            {
+                                var fallback = JsonSerializer.Deserialize<User>(el.GetRawText(), options);
+                                if (fallback != null) users.Add(fallback);
+                            }
+                        }
+                        else
+                        {
+                            var u = JsonSerializer.Deserialize<User>(el.GetRawText(), options);
+                            if (u != null) users.Add(u);
+                        }
+                    }
+                    catch (JsonException ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to deserialize a user element; skipping");
+                    }
+                }
+
+                return users;
+            }
+            catch (JsonException ex)
+            {
+                _logger.LogError(ex, "Failed to parse users response JSON");
+                return null;
+            }
+        }
+    */
     public async Task<Accommodation> CreateAccommodationAsync(string name, string description, int openTime, int closeTime)
     {
         if (string.IsNullOrWhiteSpace(name))
@@ -729,6 +853,9 @@ public class ExcelData
 }
 
 public record ExcelCell(string CellType, object? Value);
+
+
+
 
 
 
