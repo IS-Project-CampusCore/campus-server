@@ -29,6 +29,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "commons", "commons\commons.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "grades", "grades\grades.csproj", "{20CAE347-4F68-4EAD-B75E-19F6BAC97F57}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "schedule", "schedule\schedule.csproj", "{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -167,6 +169,18 @@ Global
 		{20CAE347-4F68-4EAD-B75E-19F6BAC97F57}.Release|x64.Build.0 = Release|Any CPU
 		{20CAE347-4F68-4EAD-B75E-19F6BAC97F57}.Release|x86.ActiveCfg = Release|Any CPU
 		{20CAE347-4F68-4EAD-B75E-19F6BAC97F57}.Release|x86.Build.0 = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|x64.Build.0 = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Debug|x86.Build.0 = Debug|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x64.ActiveCfg = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x64.Build.0 = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x86.ActiveCfg = Release|Any CPU
+		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

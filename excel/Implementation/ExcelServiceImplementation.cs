@@ -159,45 +159,47 @@ public class ExcelServiceImplementation(
 
                 foreach (var cell in row.Cells(1, lastHeaderCell))
                 {
+                    IXLCell sourceCell = cell.IsMerged() ? cell.MergedRange().FirstCell() : cell;
+
                     ExcelCell? excelCell = null;
-                    if (cell.Value.IsBlank)
+                    if (sourceCell.Value.IsBlank)
                     {
-                        if (types[cell.Address.ColumnNumber - 1].Contains("?"))
+                        if (types[sourceCell.Address.ColumnNumber - 1].Contains("?"))
                         {
                             rowValues.Add(null);
                             continue;
                         }
-                        result.Errors.Add($"[Excel Error] Empty cell at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        result.Errors.Add($"[Excel Error] Empty cell at Row:{sourceCell.Address.RowNumber}, Column:{sourceCell.Address.ColumnNumber}");
                     }
-                    else if (cell.Value.IsNumber)
+                    else if (sourceCell.Value.IsNumber)
                     {
-                        if (cell.TryGetValue<double>(out var value))
+                        if (sourceCell.TryGetValue<double>(out var value))
                         {
                             excelCell = new ExcelCell("double", value);
                         }
                     }
-                    else if (cell.Value.IsBoolean)
+                    else if (sourceCell.Value.IsBoolean)
                     {
-                        if (cell.TryGetValue<bool>(out var value))
+                        if (sourceCell.TryGetValue<bool>(out var value))
                         {
                             excelCell = new ExcelCell("bool", value);
                         }
                     }
-                    else if (cell.Value.IsDateTime)
+                    else if (sourceCell.Value.IsDateTime)
                     {
-                        if (cell.TryGetValue<DateTime>(out var value))
+                        if (sourceCell.TryGetValue<DateTime>(out var value))
                         {
                             excelCell = new ExcelCell("DateTime", value);
                         }
                     }
-                    else if (cell.Value.IsText)
+                    else if (sourceCell.Value.IsText)
                     {
-                        if (cell.TryGetValue<string>(out var value))
+                        if (sourceCell.TryGetValue<string>(out var value))
                         {
                             excelCell = new ExcelCell("string", value);
                         }
                     }
-                    else if (cell.Value.IsError)
+                    else if (sourceCell.Value.IsError)
                     {
                         if (cell.TryGetValue<XLError>(out var value))
                         {
@@ -206,15 +208,15 @@ public class ExcelServiceImplementation(
                     }
                     if (excelCell is not null)
                     {
-                        if (excelCell.CellType != types[cell.Address.ColumnNumber - 1] && $"{excelCell.CellType}?" != types[cell.Address.ColumnNumber - 1])
+                        if (excelCell.CellType != types[sourceCell.Address.ColumnNumber - 1] && $"{excelCell.CellType}?" != types[sourceCell.Address.ColumnNumber - 1])
                         {
-                            result.Errors.Add($"[Excel Error] Type mismatch at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}. Expected:{types[cell.Address.ColumnNumber - 1]}, Found:{excelCell.CellType}");
+                            result.Errors.Add($"[Excel Error] Type mismatch at Row:{sourceCell.Address.RowNumber}, Column:{sourceCell.Address.ColumnNumber}. Expected:{types[sourceCell.Address.ColumnNumber - 1]}, Found:{excelCell.CellType}");
                         }
                         rowValues.Add(excelCell);
                     }
                     else
                     {
-                        result.Errors.Add($"[Excel Error] Unsupported cell type at Row:{cell.Address.RowNumber}, Column:{cell.Address.ColumnNumber}");
+                        result.Errors.Add($"[Excel Error] Unsupported cell type at Row:{sourceCell.Address.RowNumber}, Column:{sourceCell.Address.ColumnNumber}");
                         rowValues.Add(null);
                     }
                 }

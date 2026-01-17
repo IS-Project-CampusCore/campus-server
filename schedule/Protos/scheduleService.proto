@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+import "Protos/common.proto";
+
+option csharp_namespace = "scheduleServiceClient";
+
+package scheduleService;
+
+service scheduleService
+{ 
+    rpc UpsertUniversitySchedule (UpsertUniScheduleRequest) returns (commons.protos.MessageResponse);
+    rpc UpsertAccommodationSchedule (UpsertAccScheduleRequest) returns (commons.protos.MessageResponse);
+
+    rpc GetUniversitySchedule (GetUniScheduleRequest) returns (commons.protos.MessageResponse);
+    rpc GetAccommodationSchedule (GetAccScheduleRequest) returns (commons.protos.MessageResponse);
+}
+
+message UpsertUniScheduleRequest
+{
+  string fileName = 1;
+  string university = 2;
+  string major = 3;
+  int32 year = 4;
+  int32 groups = 5;
+}
+
+message UpsertAccScheduleRequest
+{
+  string fileName = 1;
+  string name = 2;
+}
+
+message GetUniScheduleRequest
+{
+  string university = 1;
+  string major = 2;
+  int32 year = 3;
+  int32 group = 4;
+}
+
+message GetAccScheduleRequest
+{
+  string name = 2;
+}
