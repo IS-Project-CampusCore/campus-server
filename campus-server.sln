@@ -31,6 +31,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "grades", "grades\grades.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "schedule", "schedule\schedule.csproj", "{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "campus", "campus\campus.csproj", "{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -181,6 +183,18 @@ Global
 		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x64.Build.0 = Release|Any CPU
 		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x86.ActiveCfg = Release|Any CPU
 		{AAD110CF-DCAB-4A0D-B22F-59F8D51FEDF9}.Release|x86.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x64.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Debug|x86.Build.0 = Debug|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x64.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x64.Build.0 = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x86.ActiveCfg = Release|Any CPU
+		{6DF5A871-F77C-4025-823E-B0DD9C6ACFAA}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

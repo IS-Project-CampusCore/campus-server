@@ -1,6 +1,7 @@
 using announcementsServiceClient;
 using chatServiceClient;
 using excelServiceClient;
+using campusServiceClient;
 using FastEndpoints;
 using http.Auth;
 using Microsoft.AspNetCore.Authentication;
@@ -72,6 +73,12 @@ builder.Services.AddGrpcClient<gradesService.gradesServiceClient>(o =>
 builder.Services.AddGrpcClient<scheduleService.scheduleServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:ScheduleService"];
+    o.Address = new Uri(address!);
+});
+
+builder.Services.AddGrpcClient<campusService.campusServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:CampusService"];
     o.Address = new Uri(address!);
 });
 

@@ -7,9 +7,7 @@ using emailServiceClient;
 using excelServiceClient;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
-using System.Data;
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection.Metadata;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -17,7 +15,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using users.Model;
 using users.Utils;
-using usersServiceClient;
+using commons.EventBase;
 
 namespace users.Implementation;
 
@@ -44,7 +42,8 @@ public class UsersServiceImplementation(
     IConfiguration config,
     IDatabase database,
     emailService.emailServiceClient emailService,
-    excelService.excelServiceClient excelService
+    excelService.excelServiceClient excelService,
+    IScopedMessagePublisher publisher
     ) : IUsersServiceImplementation
 {
     private readonly ILogger<UsersServiceImplementation> _logger = logger;
@@ -54,6 +53,8 @@ public class UsersServiceImplementation(
 
     private readonly AsyncLazy<IDatabaseCollection<User>> _usersCollection = new(() => GetUserCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<VerifyCode>> _verifyCollection = new(() => GetVerifyCollection(database));
+
+    private readonly IScopedMessagePublisher _publisher = publisher;
 
     private static string[] s_userInfoTypes = { "string", "string", "string", "string?", "double?", "double?", "string?", "string?", "string?" };
 
@@ -151,6 +152,14 @@ public class UsersServiceImplementation(
         await StoreVerifyCode(newUser.Id, verifyCode);
 
         await SendVerifyEmail(newUser.Email, newUser.Name, verifyCode);
+
+        if (newUser is CampusStudent campusStudent)
+        {
+            await _publisher.Publish("NewCampusStudent", new
+            {
+                Id = newUser.Id
+            });
+        }
 
         _logger.LogInformation($"User:{newUser.Email} has been registered");
         return newUser;
@@ -495,6 +504,14 @@ public class UsersServiceImplementation(
         {
             dormitory ??= campusStudent.Dormitory;
             room ??= campusStudent.Room;
+
+            if (user.Role != role)
+            {
+                await _publisher.Publish("RemoveFromRoom", new
+                {
+                    Id = user.Id
+                });
+            }
         }
 
         User? updatedUser = NewUserFromData(email, name, role, university, year, group, major, dormitory, room, department, title);
@@ -502,6 +519,14 @@ public class UsersServiceImplementation(
         {
             _logger.LogError("Could not update User");
             throw new InternalErrorException("Could not update user");
+        }
+
+        if (updatedUser is CampusStudent cs)
+        {
+            await _publisher.Publish("NewCampusStudent", new
+            {
+                Id = user.Id
+            });
         }
 
         return await UpdateUserAsync(email, updatedUser);

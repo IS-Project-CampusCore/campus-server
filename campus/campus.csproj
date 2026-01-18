@@ -26,28 +26,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Protobuf Include="Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
-  </ItemGroup>
+    <Protobuf Include="Protos\campusService.proto" AdditionalImportDirs="../commons" GrpcServices="Server" />
+    <Protobuf Include="..\users\Protos\usersService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\usersService.proto" />
+    <Protobuf Include="..\email\Protos\emailService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\emailService.proto" />
+    <Protobuf Include="..\excel\Protos\excelService.proto" AdditionalImportDirs="../commons" GrpcServices="Client" Link="Protos\excelService.proto" />
 
-  <ItemGroup>
-    <None Update="Templates\Welcome.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\NewMessage.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\SystemMessage.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\Issue.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\Payment.html">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\Announcement.html">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

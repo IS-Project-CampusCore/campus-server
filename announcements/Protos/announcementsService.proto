@@ -8,6 +8,8 @@ service announcementsService
     rpc CreateAnnouncement (CreateAnnouncementRequest) returns (commons.protos.MessageResponse);
     rpc EditAnnouncement (EditAnnouncementRequest) returns (commons.protos.MessageResponse);
     rpc DeleteAnnouncement (DeleteAnnouncementRequest) returns (commons.protos.MessageResponse);
+
+    rpc GetAnnouncements (GetAnnRequest) returns (commons.protos.MessageResponse);
 }
 
 message CreateAnnouncementRequest
@@ -27,4 +29,9 @@ message EditAnnouncementRequest
 message DeleteAnnouncementRequest
 {
     string id = 1;
+}
+
+message GetAnnRequest
+{
+    optional string placeholder = 1;
 }

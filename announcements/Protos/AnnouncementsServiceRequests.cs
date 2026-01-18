@@ -37,3 +37,8 @@ public partial class DeleteAnnouncementRequest : IRequestBase
         return null;
     }
 }
+
+public partial class GetAnnRequest : IRequestBase
+{
+    public string? Validate() => null;
+}

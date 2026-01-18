@@ -47,6 +47,7 @@ services:
       - GrpcServices__ChatService=http://chat:8080 
       - GrpcServices__GradesService=http://grades:8080 
       - GrpcServices__ScheduleService=http://schedule:8080 
+      - GrpcServices__CampusService=http://campus:8080 
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
@@ -59,6 +60,7 @@ services:
       - excel
       - chat
       - announcements
+      - campus
       - seq
       - grades 
       - schedule
@@ -93,12 +95,19 @@ services:
       - Logging__SeqUrl=http://seq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=users
+      - RabbitMq__Host=rabbitmq
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
     depends_on:
-      - email
-      - excel
-      - seq
-      - mongo
+      rabbitmq:
+        condition: service_healthy
+      email:
+        condition: service_started
+      excel:
+        condition: service_started
+      seq:
+        condition: service_started
+      mongo:
+        condition: service_started
     networks:
       - campus-network
 
@@ -246,5 +255,40 @@ services:
       - Logging__SeqUrl=http://seq
     depends_on:
       - seq
+    networks:
+      - campus-network
+
+  campus:
+    build:
+      context: .
+      dockerfile: ./campus/Dockerfile
+    ports:
+      - "8088:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Logging__SeqUrl=http://seq
+      - CampusConfig__CampusExcelPath=/app/FileStorage/ExcelFiles
+      - CampusConfig__CampusExcelName=DormitoryData_ServiceConfig.xlsx
+      - MongoDB__ConnectionString=mongodb://mongo:27017/
+      - MongoDB__DatabaseName=campus
+      - RabbitMq__Host=rabbitmq
+      - GrpcServices__EmailService=http://email:8080 
+      - GrpcServices__ExcelService=http://excel:8080
+      - GrpcServices__UsersService=http://users:8080
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      seq:
+        condition: service_started
+      mongo:
+        condition: service_started
+      excel:
+        condition: service_started
+      users:
+        condition: service_started
+      email:
+        condition: service_started
+    volumes:
+      - ./FileStorage:/app/FileStorage
     networks:
       - campus-network

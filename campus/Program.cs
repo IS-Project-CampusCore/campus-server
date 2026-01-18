@@ -1,19 +1,19 @@
+using campus;
+using campus.Implementation;
 using commons.Database;
-using commons.EventBase;
 using commons.RequestBase;
 using emailServiceClient;
 using excelServiceClient;
 using MassTransit;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Serilog;
+using System.Diagnostics;
 using System.Net;
-using users;
-using users.Implementation;
+using usersServiceClient;
+using commons.EventBase;
 using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
-
-Console.Clear();
 
 builder.Host.UseSerilog((context, config) =>
 {
@@ -30,11 +30,6 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
-string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
-string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
-
-builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
-
 builder.Services.AddMassTransit(x =>
 {
     var myAssembly = Assembly.GetExecutingAssembly();
@@ -48,11 +43,20 @@ builder.Services.AddMassTransit(x =>
             h.Username("guest");
             h.Password("guest");
         });
-        cfg.RegisterConsumers(context, myAssembly, "chat");
+        cfg.RegisterConsumers(context, myAssembly, "campus");
     });
 });
 
-builder.Services.AddSingleton<IScopedMessagePublisher, ScopedMessagePublisher>();
+string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
+string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
+
+builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
+
+builder.Services.AddGrpcClient<usersService.usersServiceClient>(o =>
+{
+    string? address = builder.Configuration["GrpcServices:UsersService"];
+    o.Address = new Uri(address!);
+});
 
 builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
 {
@@ -68,7 +72,7 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
 
 builder.Services.AddMediatR(cfg =>
 {
-    cfg.RegisterServicesFromAssembly(typeof(UsersService).Assembly);
+    cfg.RegisterServicesFromAssembly(typeof(CampusService).Assembly);
     cfg.LicenseKey = builder.Configuration["MediatR:LicenseKey"];
 });
 
@@ -76,13 +80,32 @@ builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
 });
-
 builder.Services.AddScoped<ServiceInterceptor>();
 
-builder.Services.AddSingleton<IUsersServiceImplementation, UsersServiceImplementation>();
+builder.Services.AddSingleton<CampusServiceImplementation>();
 
 var app = builder.Build();
 
-app.MapGrpcService<UsersService>();
+try
+{
+    var serviceImpl = app.Services.GetRequiredService<CampusServiceImplementation>();
+
+    string? filePath = builder.Configuration["CampusConfig:CampusExcelPath"];
+    string? fileName = builder.Configuration["CampusConfig:CampusExcelName"];
+
+    if (filePath is null || fileName is null)
+    {
+        return;
+    }
+
+    await serviceImpl.GenerateCampusAsync(filePath, fileName);
+}
+catch (Exception ex)
+{
+    Debug.WriteLine(ex);
+    return;
+}
+
+app.MapGrpcService<CampusService>();
 
 app.Run();

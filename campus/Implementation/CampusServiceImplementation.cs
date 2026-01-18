@@ -1,0 +1,700 @@
+﻿using campus.Models;
+using commons.Database;
+using commons.Protos;
+using commons.RequestBase;
+using commons.Tools;
+using emailServiceClient;
+using excelServiceClient;
+using Google.Protobuf;
+using MongoDB.Driver;
+using System;
+using System.Text.Json;
+using usersServiceClient;
+namespace campus.Implementation;
+
+
+public interface ICampusService
+{
+    Task<List<Accommodation>> GetAccommodations();
+    Task<Accommodation?> GetAccommodationById(string id);
+    Task<Accommodation> CreateAccommodationAsync(string name, string description);
+    Task GenerateCampusAsync(string filePath, string fileName);
+    Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv);
+    Task<Issue> ReportIssueAsync(string issuerId, string location, string description);
+}
+public class CampusServiceImplementation(
+    ILogger<CampusServiceImplementation> logger,
+    IDatabase database,
+    usersService.usersServiceClient usersService,
+    emailService.emailServiceClient emailService,
+    excelService.excelServiceClient excelService
+) : ICampusService
+{
+    private readonly ILogger<CampusServiceImplementation> _logger = logger;
+
+    private readonly usersService.usersServiceClient _usersService = usersService;
+    private readonly emailService.emailServiceClient _emailService = emailService;
+    private readonly excelService.excelServiceClient _excelService = excelService;
+
+    private readonly AsyncLazy<IDatabaseCollection<Accommodation>> _accommodations= new (() => GetAccommodationsCollection(database));
+    private readonly AsyncLazy<IDatabaseCollection<Dormitory>> _dormitories = new(() => GetDormitoriesCollection(database));
+    private readonly AsyncLazy<IDatabaseCollection<Room>> _rooms = new(() => GetRoomsCollection(database));
+    private readonly AsyncLazy<IDatabaseCollection<Payment>> _payments = new(() => GetPaymentsCollection(database));
+    private readonly AsyncLazy<IDatabaseCollection<Issue>> _issues = new(() => GetIssuesCollection(database));
+
+    public async Task<Accommodation?> GetAccommodationById(string id)
+    {
+        var db = await _accommodations;
+        try
+        {
+            return await db.GetOneByIdAsync(id);
+
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetAccommodations failed");
+            throw new InternalErrorException("Failed to retrieve accommodation");
+        }
+    }
+
+    public async Task<List<Accommodation>> GetAccommodations()
+    {
+        var col = await _accommodations;
+        try
+        {
+            return await col.MongoCollection.Find(_ => true).ToListAsync();
+            
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "GetAccommodations failed");
+            throw new InternalErrorException("Failed to retrieve accommodations");
+        }
+    }
+
+    public async Task GenerateCampusAsync(string filePath, string fileName)
+    {
+        byte[] fileBytes = File.ReadAllBytes(Path.Combine(filePath, fileName));
+        var upsertRes = await _excelService.UpsertExcelAsync(new UpsertExcelRequest
+        {
+            FileName = fileName,
+            Content = ByteString.CopyFrom(fileBytes)
+        });
+
+        if (!upsertRes.Success || string.IsNullOrEmpty(upsertRes.Body))
+        {
+            _logger.LogError("Could not upsert Campus Config File");
+            return;
+        }
+
+        var excelData = await ParseAndValidateExcelAsync(fileName);
+
+        var dormitoriesCol = await _dormitories;
+        var roomsCol = await _rooms;
+
+        await SeedDormitoriesAndRoomsAsync(excelData);
+    }
+
+    private async Task<ExcelData> ParseAndValidateExcelAsync(string placeholder)
+    {
+        var exactTypes = new List<string>
+        {
+            "string",
+            "string",
+            "double",
+            "double",
+            "double"
+        };
+
+        var finalReq = new ParseExcelRequest { FileName = placeholder };
+        finalReq.CellTypes.AddRange(exactTypes);
+
+        MessageResponse finalRes;
+        try
+        {
+            finalRes = await _excelService.ParseExcelAsync(finalReq);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "ParseExcel (final) gRPC call failed for file {File}", placeholder);
+            throw new InternalErrorException("Failed to parse excel file");
+        }
+
+        if (!finalRes.Success)
+        {
+            _logger.LogWarning("ParseExcel (final) returned failure: {Errors}", finalRes.Errors);
+            throw new InternalErrorException(finalRes.Errors ?? "Excel parse failed");
+        }
+
+        var excelData = finalRes.GetPayload<ExcelData>();
+        if (excelData is null)
+        {
+            _logger.LogWarning("ParseExcel (final) returned no payload for file {File}", placeholder);
+            throw new BadRequestException("Parsed excel file is empty");
+        }
+
+        if (excelData.Errors is { Count: > 0 })
+        {
+            var stringErrors = string.Join("; ", excelData.Errors);
+            foreach (var e in excelData.Errors)
+                _logger.LogWarning("Excel parse warning: {Err}", e);
+            throw new BadRequestException("Excel parse errors: " + stringErrors);
+        }
+
+        return excelData;
+    }
+
+    private static string? CellToString(object? v)
+    {
+        if (v is null) return null;
+        if (v is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.String) return je.GetString();
+            if (je.ValueKind == JsonValueKind.Number) return je.GetRawText();
+            if (je.ValueKind == JsonValueKind.True) return "true";
+            if (je.ValueKind == JsonValueKind.False) return "false";
+            return je.ToString();
+        }
+        return v.ToString();
+    }
+
+    private static bool TryCellToInt(object? v, out int result)
+    {
+        result = 0;
+        if (v is null) return false;
+        if (v is JsonElement je)
+        {
+            if (je.ValueKind == JsonValueKind.Number && je.TryGetInt32(out result)) return true;
+            if (je.ValueKind == JsonValueKind.String && int.TryParse(je.GetString(), out result)) return true;
+            return false;
+        }
+        if (v is int i) { result = i; return true; }
+        if (v is long l) { result = (int)l; return true; }
+        if (v is double d) { result = Convert.ToInt32(d); return true; }
+        if (v is string s && int.TryParse(s, out result)) return true;
+        return false;
+    }
+
+    private async Task SeedDormitoriesAndRoomsAsync(ExcelData excelData)
+    {
+        var dormitoriesCol = await _dormitories;
+        var roomsCol = await _rooms;
+
+        var dormCache = new Dictionary<string, Dormitory>(StringComparer.OrdinalIgnoreCase);
+        int rowIndex = 0;
+
+        foreach (var row in excelData.Rows)
+        {
+            rowIndex++;
+            if (row is null) continue;
+
+            if (row.Count < 5)
+            {
+                _logger.LogInformation("Skipping row {Row}: not enough columns", rowIndex + 1);
+                continue;
+            }
+
+            var dormNameCell = row[0];
+            var dormAddrCell = row[1];
+            var amountCell = row[2];
+            var roomNumberCell = row[3];
+            var capacityCell = row[4];
+
+            string? dormName = CellToString(dormNameCell?.Value);
+            string? dormAddr = CellToString(dormAddrCell?.Value);
+
+            if (!TryCellToInt(roomNumberCell?.Value, out var roomNumberInt))
+            {
+                _logger.LogInformation("Skipping row {Row}: invalid room number (must be numeric)", rowIndex + 1);
+                throw new BadRequestException("Invalid room number");
+            }
+
+            string roomNumber = roomNumberInt.ToString();
+
+            if (!TryCellToInt(capacityCell?.Value, out var capacity))
+            {
+                _logger.LogInformation("Skipping row {Row}: invalid capacity (must be numeric)", rowIndex + 1);
+                throw new BadRequestException("Invalid capacity");
+            }
+
+            if (!TryCellToInt(amountCell?.Value, out var amountInt))
+            {
+                _logger.LogInformation("Skipping row {Row}: invalid amount", rowIndex + 1);
+                throw new BadRequestException("Invalid amount");
+            }
+
+            if (string.IsNullOrWhiteSpace(dormName))
+            {
+                _logger.LogInformation("Skipping row {Row}: dormitory name missing", rowIndex + 1);
+                throw new BadRequestException("Dormitory name missing");
+            }
+
+            string dormKey = $"{dormName.Trim().ToLowerInvariant()}|{(dormAddr ?? string.Empty).Trim().ToLowerInvariant()}";
+
+            Dormitory? dorm;
+            if (!dormCache.TryGetValue(dormKey, out dorm))
+            {
+                dorm = await dormitoriesCol.GetOneAsync(d => d.Name == dormName && d.Address == (dormAddr ?? string.Empty));
+
+                if (dorm is null)
+                {
+                    dorm = new Dormitory
+                    {
+                        Name = dormName,
+                        Address = dormAddr ?? string.Empty,
+                        Amount = amountInt
+                    };
+                    await dormitoriesCol.InsertAsync(dorm);
+                    _logger.LogInformation("Created Dormitory: {Dorm} ({Addr})", dorm.Name, dorm.Address);
+                }
+
+                dormCache[dormKey] = dorm;
+            }
+
+            var existingRoom = await roomsCol.GetOneAsync(r => r.DormitoryId == dorm.Id && r.RoomNumber == roomNumber);
+            if (existingRoom is not null)
+            {
+                _logger.LogInformation("Row {Row}: room {Room} already exists in dorm {Dorm}", rowIndex + 1, roomNumber, dorm.Name);
+                continue;
+            }
+
+            var room = new Room
+            {
+                DormitoryId = dorm.Id,
+                RoomNumber = roomNumber,
+                Capacity = capacity,
+                MembersId = new()
+            };
+
+            await roomsCol.InsertAsync(room);
+            _logger.LogInformation("Created Room {Room} in Dormitory {Dorm} (Capacity: {Cap})", roomNumber, dorm.Name, capacity);
+        }
+    }
+
+    public async Task AssignStudentToRoomsAsync(string userId)
+    {
+        var rooms = await _rooms;
+
+        if (await rooms.ExistsAsync(r => r.MembersId.Contains(userId)))
+        {
+            _logger.LogInformation("User has already a room assigned");
+            return;
+        }
+
+        var room = await rooms.MongoCollection.Find(r => r.MembersId.Count < r.Capacity).FirstAsync();
+        if (room is null)
+        {
+            _logger.LogInformation("There are no rooms left");
+            throw new NotFoundException("No free rooms found");
+        }
+
+        var userRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = userId });
+        if (!userRes.Success || string.IsNullOrEmpty(userRes.Body))
+        {
+            _logger.LogInformation("User not found");
+            throw new NotFoundException("User not found");
+        }
+
+        var payload = userRes.Payload;
+        var email = payload.GetString("Email");
+
+        var updateRes = await _usersService.UpdateUserAsync(new UpdateUserRequest
+        {
+            Email = email,
+            Room = room.Id,
+            Dormitory = room.DormitoryId
+        });
+
+        if (!updateRes.Success)
+        {
+            _logger.LogError("Could not assign room to user");
+            throw new InternalErrorException("Room can not be assigned");
+        }
+
+        room.MembersId.Add(userId);
+        await rooms.ReplaceAsync(room);
+
+        _logger.LogInformation($"User:{userId} was assigned to Dormitory:{room.DormitoryId}, Room:{room.Id}");
+    }
+
+    public async Task RemoveStudentFromRoom(string userId)
+    {
+        var rooms = await _rooms;
+
+        var room = await rooms.GetOneAsync(r => r.MembersId.Contains(userId));
+        if (room is null)
+        {
+            _logger.LogInformation("User does not have a room");
+            return;
+        }
+
+        room.MembersId.Remove(userId);
+        await rooms.ReplaceAsync(room);
+
+        _logger.LogInformation($"User:{userId} was removed from Dormitory:{room.DormitoryId}, Room:{room.Id}");
+    }
+
+    public async Task<Accommodation> CreateAccommodationAsync(string name, string description)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            _logger.LogInformation("Accommodation name cannot be empty or null");
+            throw new BadRequestException("Accommodation name cannot be empty");
+        }
+
+        var accommodation = new Accommodation
+        {
+            Name = name,
+            Description = description ?? string.Empty
+        };
+
+        var col = await _accommodations;
+        _logger.LogInformation("Creating accommodation {Name}", name);
+        await col.InsertAsync(accommodation);
+
+        return accommodation;
+    }
+
+    public async Task<Issue> ReportIssueAsync(string issuerId, string location, string description)
+    {
+        if (string.IsNullOrWhiteSpace(issuerId))
+        {
+            _logger.LogInformation("ReportIssue failed: issuerId empty");
+            throw new BadRequestException("IssuerId cannot be empty");
+        }
+
+        if (string.IsNullOrWhiteSpace(location) && string.IsNullOrWhiteSpace(description))
+        {
+            _logger.LogInformation("ReportIssue failed: no details provided");
+            throw new BadRequestException("Location or description must be provided");
+        }
+
+        try
+        {
+            var getUserRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = issuerId });
+            if (!getUserRes.Success)
+            {
+                _logger.LogInformation("ReportIssue: user lookup returned failure. Code:{Code}, Errors:{Errors}", getUserRes.Code, getUserRes.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogInformation("ReportIssue: users service lookup failed ({Type}) {Msg}", ex.GetType().Name, ex.Message);
+        }
+
+        var issue = new Issue
+        {
+            IssuerId = issuerId,
+            Location = location ?? string.Empty,
+            Description = description ?? string.Empty
+        };
+
+        var col = await _issues;
+        _logger.LogInformation("Inserting new issue by Issuer:{IssuerId} Location:{Location}", issuerId, location);
+        await col.InsertAsync(issue);
+
+        try
+        {
+            var templateData = JsonSerializer.Serialize(new
+            {
+                Location = location,
+                Description = description,
+            });
+
+            var emailReq = new SendEmailRequest
+            {
+                ToEmail = "birlea94@gmail.com",        
+                ToName = "Campus Support",
+                TemplateName = "Issue",        
+                TemplateData = templateData
+            };
+
+            try
+            {
+                await _emailService.SendEmailAsync(emailReq);
+                _logger.LogInformation("Issue notification email sent to issues@example.com");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send issue notification email to issues@example.com");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to prepare issue notification email for issue {IssueId}", issue.Id);
+        }
+
+        return issue;
+    }
+
+    public async Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv)
+    {
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            _logger.LogInformation("CreatePayment failed: userId is empty");
+            throw new BadRequestException("UserId cannot be empty");
+        }
+
+        if (amount <= 0)
+        {
+            _logger.LogInformation("CreatePayment failed: invalid amount {Amount}", amount);
+            throw new BadRequestException("Amount must be greater than zero");
+        }
+        if (!IsCardNumberFormatValid(cardNumber))
+        {
+            _logger.LogInformation("CreatePayment failed: invalid card number format");
+            throw new BadRequestException("Invalid card number format");
+        }
+        if (!IsLuhnValid(cardNumber))
+        {
+            _logger.LogInformation("CreatePayment failed: card number failed Luhn check");
+            throw new BadRequestException("Invalid card number");
+        }
+        if (!IsCvvValid(cvv))
+        {
+            _logger.LogInformation("CreatePayment failed: invalid CVV");
+            throw new BadRequestException("Invalid CVV");
+        }
+        if (!IsNotExpired(expDate))
+        {
+            _logger.LogInformation("CreatePayment failed: card is expired");
+            throw new BadRequestException("Card is expired");
+        }
+
+        var getUserRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = userId });
+        if (!getUserRes.Success)
+        {
+            _logger.LogInformation("CreatePayment: user not found. Code:{Code}, Errors:{Errors}", getUserRes.Code, getUserRes.Errors);
+            throw new NotFoundException("User not found.");
+        }
+
+        var payload = getUserRes.Payload;
+        string userName = "User";
+        string userEmail = "example@example.com";
+
+        try
+        {
+            userName = payload.GetString("Name") ?? userName;
+        }
+        catch { }
+
+        var maybeEmail = payload.GetString("Email");
+        if (!string.IsNullOrWhiteSpace(maybeEmail))
+        {
+            userEmail = maybeEmail;
+        }
+        else
+        {
+            throw new BadRequestException("The user doesn't have an email set!");
+        }
+
+        var payment = new Payment
+        {
+            UserId = userId,
+            Amount = Convert.ToDecimal(amount),
+            IsActive = true,
+            LastPaymentDate = DateTime.UtcNow,
+            NextPaymentDate = DateTime.UtcNow.AddMonths(1)
+        };
+
+        var paymentsCol = await _payments;
+        _logger.LogInformation("Creating payment for User:{UserId} Amount:{Amount}", userId, amount);
+        await paymentsCol.InsertAsync(payment);
+
+        try
+        {
+            var templateData = JsonSerializer.Serialize(new
+            {
+                Name = userName,
+                Amount = payment.Amount.ToString("F2"),
+                Date = payment.LastPaymentDate.ToString("yyyy-MM-dd")
+            });
+
+            var emailReq = new SendEmailRequest
+            {
+                ToEmail = userEmail,
+                ToName = userName ?? string.Empty,
+                TemplateName = "Payment",
+                TemplateData = templateData
+            };
+
+            try
+            {
+                await _emailService.SendEmailAsync(emailReq);
+                _logger.LogInformation("Payment notification email sent to {Email}", userEmail);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send payment notification email to {Email}", userEmail);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to prepare payment notification email for user {UserId}", userId);
+        }
+
+        return payment;
+    }
+
+    private bool IsCardNumberFormatValid(string cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber)) return false;
+
+        string cleanNumber = cardNumber.Replace(" ", "").Replace("-", "");
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cleanNumber, @"^\d{16}$");
+    }
+
+    private bool IsLuhnValid(string cardNumber)
+    {
+        int sum = 0;
+        bool alternate = false;
+        for (int i = cardNumber.Length - 1; i >= 0; i--)
+        {
+            char c = cardNumber[i];
+            if (!char.IsDigit(c)) return false; 
+
+            int n = c - '0'; 
+
+            if (alternate)
+            {
+                n *= 2;
+                if (n > 9) n -= 9; 
+            }
+
+            sum += n;
+            alternate = !alternate;
+        }
+
+        return (sum % 10 == 0);
+    }
+
+    private bool IsCvvValid(string cvv)
+    {
+        if (string.IsNullOrWhiteSpace(cvv)) return false;
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cvv.Trim(), @"^\d{3}$");
+    }
+
+    private bool IsNotExpired(string expirationString)
+    {
+        if (string.IsNullOrWhiteSpace(expirationString)) return false;
+
+        expirationString = expirationString.Trim();
+
+        var parts = expirationString.Split('/');
+        if (parts.Length != 2) return false; 
+
+        if (!int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
+        {
+            return false; 
+        }
+
+        if (month < 1 || month > 12) return false;
+
+        int fullYear = year < 100 ? 2000 + year : year;
+
+        int lastDay = DateTime.DaysInMonth(fullYear, month);
+        var cardExpiry = new DateTime(fullYear, month, lastDay, 23, 59, 59);
+
+        return cardExpiry > DateTime.Now;
+    }
+
+    internal static async Task<IDatabaseCollection<Accommodation>> GetAccommodationsCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<Accommodation>();
+
+        var nameIndex = Builders<Accommodation>.IndexKeys.Ascending(a => a.Name);
+
+        CreateIndexModel<Accommodation> index1 = new(nameIndex, new CreateIndexOptions
+        {
+            Name = "accommodationNameIndex",
+            Unique = true
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
+        return collection;
+    }
+
+    internal static async Task<IDatabaseCollection<Dormitory>> GetDormitoriesCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<Dormitory>();
+
+        var nameIndex = Builders<Dormitory>.IndexKeys.Ascending(d => d.Name);
+
+        CreateIndexModel<Dormitory> index1 = new(nameIndex, new CreateIndexOptions
+        {
+            Name = "dormitoryNameIndex"
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
+        return collection;
+    }
+
+    internal static async Task<IDatabaseCollection<Room>> GetRoomsCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<Room>();
+
+        var dormIndex = Builders<Room>.IndexKeys.Ascending(r => r.DormitoryId);
+        var roomNumberIndex = Builders<Room>.IndexKeys.Ascending(r => r.RoomNumber);
+
+        CreateIndexModel<Room> index1 = new(dormIndex, new CreateIndexOptions
+        {
+            Name = "roomDormitoryIndex"
+        });
+
+        CreateIndexModel<Room> index2 = new(roomNumberIndex, new CreateIndexOptions
+        {
+            Name = "roomNumberIndex"
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1, index2]);
+        return collection;
+    }
+
+    internal static async Task<IDatabaseCollection<Payment>> GetPaymentsCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<Payment>();
+
+        var userIndex = Builders<Payment>.IndexKeys.Ascending(p => p.UserId);
+
+        CreateIndexModel<Payment> index1 = new(userIndex, new CreateIndexOptions
+        {
+            Name = "paymentUserIndex"
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
+        return collection;
+    }
+
+    internal static async Task<IDatabaseCollection<Issue>> GetIssuesCollection(IDatabase database)
+    {
+        var collection = database.GetCollection<Issue>();
+
+        var issuerIndex = Builders<Issue>.IndexKeys.Ascending(i => i.IssuerId);
+
+        CreateIndexModel<Issue> index1 = new(issuerIndex, new CreateIndexOptions
+        {
+            Name = "issueIssuerIndex"
+        });
+
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
+        return collection;
+    }
+}
+
+public class ExcelData
+{
+    public List<string> Headers { get; set; } = new();
+    public List<List<ExcelCell?>> Rows { get; set; } = new();
+    public List<string> Errors { get; set; } = new();
+}
+
+public record ExcelCell(string CellType, object? Value);
+
+
+
+
+
+
+

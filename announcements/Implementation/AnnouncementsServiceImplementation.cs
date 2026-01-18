@@ -23,6 +23,12 @@ public class AnnouncementServiceImplementation(
     private readonly emailService.emailServiceClient _emailService = emailService;
     private readonly usersService.usersServiceClient _usersService = usersService;
 
+    public async Task<List<Announcement>> GetAnnouncementsAsync()
+    {
+        var announcements = await _announcements;
+        return await announcements.MongoCollection.Find(_ => true).ToListAsync();
+    }
+
     public async Task<Announcement> CreateAsync(CreateAnnouncementRequest request)
     {
         var collection = await _announcements;
