@@ -23,7 +23,6 @@
     <ProjectReference Include="..\commons\commons.csproj">
       <GlobalPropertiesToRemove></GlobalPropertiesToRemove>
     </ProjectReference>
-    <ProjectReference Include="..\users\users.csproj" />
   </ItemGroup>
 
   <ItemGroup>

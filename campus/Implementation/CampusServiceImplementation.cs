@@ -5,6 +5,7 @@ using commons.RequestBase;
 using commons.Tools;
 using emailServiceClient;
 using excelServiceClient;
+using Google.Protobuf;
 using MongoDB.Driver;
 using System;
 using System.Text.Json;
@@ -14,11 +15,10 @@ namespace campus.Implementation;
 
 public interface ICampusService
 {
-    Task<Scheddule?> GetAccommodationScheduleById(string id);
     Task<List<Accommodation>> GetAccommodations();
     Task<Accommodation?> GetAccommodationById(string id);
-    Task<Accommodation> CreateAccommodationAsync(string name, string description, int openTime, int closeTime);
-    Task GenerateDistributionAsync(string placeholder);
+    Task<Accommodation> CreateAccommodationAsync(string name, string description);
+    Task GenerateCampusAsync(string filePath, string fileName);
     Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv);
     Task<Issue> ReportIssueAsync(string issuerId, string location, string description);
 }
@@ -28,12 +28,10 @@ public class CampusServiceImplementation(
     usersService.usersServiceClient usersService,
     emailService.emailServiceClient emailService,
     excelService.excelServiceClient excelService
-
-
-
 ) : ICampusService
 {
     private readonly ILogger<CampusServiceImplementation> _logger = logger;
+
     private readonly usersService.usersServiceClient _usersService = usersService;
     private readonly emailService.emailServiceClient _emailService = emailService;
     private readonly excelService.excelServiceClient _excelService = excelService;
@@ -43,23 +41,6 @@ public class CampusServiceImplementation(
     private readonly AsyncLazy<IDatabaseCollection<Room>> _rooms = new(() => GetRoomsCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<Payment>> _payments = new(() => GetPaymentsCollection(database));
     private readonly AsyncLazy<IDatabaseCollection<Issue>> _issues = new(() => GetIssuesCollection(database));
-
-
-    public async Task<Scheddule?> GetAccommodationScheduleById(string id)
-    {
-        var col = await _accommodations;
-        
-        
-        var accommodation = await col.GetOneByIdAsync(id);
-        if (accommodation is null)
-        {
-            _logger.LogInformation("GetAccommodationSchedule: accommodation not found for Id:{Id}", id);
-            throw new NotFoundException("Accommodation not found");
-        }
-
-        return accommodation.Timetable;
-        
-    }
 
     public async Task<Accommodation?> GetAccommodationById(string id)
     {
@@ -91,25 +72,38 @@ public class CampusServiceImplementation(
         }
     }
 
-    public async Task GenerateDistributionAsync(string placeholder)
+    public async Task GenerateCampusAsync(string filePath, string fileName)
     {
-        var excelData = await ParseAndValidateExcelAsync(placeholder);
+        byte[] fileBytes = File.ReadAllBytes(Path.Combine(filePath, fileName));
+        var upsertRes = await _excelService.UpsertExcelAsync(new UpsertExcelRequest
+        {
+            FileName = fileName,
+            Content = ByteString.CopyFrom(fileBytes)
+        });
+
+        if (!upsertRes.Success || string.IsNullOrEmpty(upsertRes.Body))
+        {
+            _logger.LogError("Could not upsert Campus Config File");
+            return;
+        }
+
+        var excelData = await ParseAndValidateExcelAsync(fileName);
+
         var dormitoriesCol = await _dormitories;
         var roomsCol = await _rooms;
-        await SeedDormitoriesAndRoomsAsync(excelData, dormitoriesCol, roomsCol);
 
-        await AssignStudentsToRoomsAsync(roomsCol);
+        await SeedDormitoriesAndRoomsAsync(excelData);
     }
 
     private async Task<ExcelData> ParseAndValidateExcelAsync(string placeholder)
     {
         var exactTypes = new List<string>
         {
-            "String",
-            "String",
-            "Double",
-            "Double",
-            "Double"
+            "string",
+            "string",
+            "double",
+            "double",
+            "double"
         };
 
         var finalReq = new ParseExcelRequest { FileName = placeholder };
@@ -181,8 +175,11 @@ public class CampusServiceImplementation(
         return false;
     }
 
-    private async Task SeedDormitoriesAndRoomsAsync(ExcelData excelData, IDatabaseCollection<Dormitory> dormitoriesCol, IDatabaseCollection<Room> roomsCol)
+    private async Task SeedDormitoriesAndRoomsAsync(ExcelData excelData)
     {
+        var dormitoriesCol = await _dormitories;
+        var roomsCol = await _rooms;
+
         var dormCache = new Dictionary<string, Dormitory>(StringComparer.OrdinalIgnoreCase);
         int rowIndex = 0;
 
@@ -274,208 +271,70 @@ public class CampusServiceImplementation(
         }
     }
 
-    private async Task AssignStudentsToRoomsAsync(IDatabaseCollection<Room> roomsCol)
+    public async Task AssignStudentToRoomsAsync(string userId)
     {
-        var allUsers = await FetchAllUsers();
-      
-        var allRooms = await roomsCol.MongoCollection
-                                     .Find(_ => true)
-                                     .ToListAsync();
+        var rooms = await _rooms;
 
-        var assignedStudentIdsFromRooms = allRooms
-            .SelectMany(r => r.MembersId)
-            .Where(id => !string.IsNullOrWhiteSpace(id))
-            .ToHashSet();
-
-
-        /*
-                // Prefer using CampusStudent.Dormitory/Room from users service
-                List<string> homelessStudentIds;
-                var campusStudents = allUsers?.OfType<CampusStudent>().ToList();
-
-                if (campusStudents is null || campusStudents.Count == 0)
-                {
-                    // Fallback: no users returned from service — fall back to DB-only approach (everyone not in rooms)
-                    _logger.LogWarning("No campus students returned from users service; falling back to DB membership check.");
-                    // If you have a list of all student IDs somewhere, you would subtract assignedStudentIdsFromRooms from that.
-                    // Here we have no full student list, so abort early to avoid assigning incorrectly.
-                    throw new InternalErrorException("Cannot generate distribution: no campus students available from users service.");
-                }
-                else
-                {
-                    // Students that report no room/dorm are considered homeless
-                    homelessStudentIds = campusStudents
-                        .Where(cs => string.IsNullOrWhiteSpace(cs.Dormitory) && string.IsNullOrWhiteSpace(cs.Room) && !string.IsNullOrWhiteSpace(cs.Id))
-                        .Select(cs => cs.Id!)
-                        .ToList();
-
-                    // Optional: detect mismatches where a user reports being assigned but DB doesn't contain them
-                    var reportedAssigned = campusStudents
-                        .Where(cs => !string.IsNullOrWhiteSpace(cs.Dormitory) || !string.IsNullOrWhiteSpace(cs.Room))
-                        .Select(cs => cs.Id!)
-                        .Where(id => !assignedStudentIdsFromRooms.Contains(id))
-                        .ToList();
-
-                    if (reportedAssigned.Count > 0)
-                    {
-                        _logger.LogWarning("Users service reports these students as assigned but rooms DB has no membership entries: {UserIds}", string.Join(",", reportedAssigned));
-                        // Decide whether to reconcile (e.g. add them to the rooms DB) or to ignore — here we only log.
-                    }
-                }*/
-        if (allRooms.Count == 0)
+        if (await rooms.ExistsAsync(r => r.MembersId.Contains(userId)))
         {
-            _logger.LogError("GenerateDistribution failed: No rooms found in database. Excel seed may have failed.");
-            throw new InternalErrorException("No rooms found. Excel seed may have failed.");
-        }
-
-        var assignedStudentIds = allRooms
-            .SelectMany(r => r.MembersId)
-            .ToHashSet();
-
-        var homelessStudentIds = allUsers?
-                    .Where(u => string.Equals(u.RoleString, "5", StringComparison.OrdinalIgnoreCase)
-                                && !assignedStudentIds.Contains(u.Id))
-                    .Select(u => u.Id)
-                    .ToList() ?? new List<string?>();
-
-        if (homelessStudentIds.Count == 0)
-        {
-            _logger.LogInformation("GenerateDistribution: All students are already assigned. No changes made.");
+            _logger.LogInformation("User has already a room assigned");
             return;
         }
 
-        var random = new Random();
-        var shuffledStudents = homelessStudentIds.OrderBy(x => random.Next()).ToList();
-
-        var roomQueue = new Queue<Room>(allRooms.Where(r => r.MembersId.Count < r.Capacity));
-
-        int assignedCount = 0;
-
-        while (shuffledStudents.Count > 0 && roomQueue.Count > 0)
+        var room = await rooms.MongoCollection.Find(r => r.MembersId.Count < r.Capacity).FirstAsync();
+        if (room is null)
         {
-            var currentRoom = roomQueue.Dequeue();
-            bool roomWasModified = false;
-
-            while (currentRoom.MembersId.Count < currentRoom.Capacity && shuffledStudents.Count > 0)
-            {
-                if (shuffledStudents[0] != null)
-                {
-                    currentRoom.MembersId.Add(shuffledStudents[0]!);
-                    assignedCount++;
-                    roomWasModified = true;
-                }
-                shuffledStudents.RemoveAt(0);
-            }
-
-            if (roomWasModified)
-            {
-                await roomsCol.ReplaceAsync(currentRoom);
-            }
+            _logger.LogInformation("There are no rooms left");
+            throw new NotFoundException("No free rooms found");
         }
 
-        if (shuffledStudents.Count > 0)
+        var userRes = await _usersService.GetUserByIdAsync(new UserIdRequest { Id = userId });
+        if (!userRes.Success || string.IsNullOrEmpty(userRes.Body))
         {
-            throw new BadRequestException($"The Dormitories are full! students without a room left {shuffledStudents.Count}");
+            _logger.LogInformation("User not found");
+            throw new NotFoundException("User not found");
         }
 
-        _logger.LogInformation("Distribution Complete. Assigned {Assigned} new students. Rooms total: {Rooms}", assignedCount, allRooms.Count);
+        var payload = userRes.Payload;
+        var email = payload.GetString("Email");
+
+        var updateRes = await _usersService.UpdateUserAsync(new UpdateUserRequest
+        {
+            Email = email,
+            Room = room.Id,
+            Dormitory = room.DormitoryId
+        });
+
+        if (!updateRes.Success)
+        {
+            _logger.LogError("Could not assign room to user");
+            throw new InternalErrorException("Room can not be assigned");
+        }
+
+        room.MembersId.Add(userId);
+        await rooms.ReplaceAsync(room);
+
+        _logger.LogInformation($"User:{userId} was assigned to Dormitory:{room.DormitoryId}, Room:{room.Id}");
     }
 
-    private async Task<List<UserDto>?> FetchAllUsers()
+    public async Task RemoveStudentFromRoom(string userId)
     {
-        var response = await _usersService.GetAllUsersAsync(new GetAllUsersRequest { Placeholder = "" });
+        var rooms = await _rooms;
 
-        if (!response.Success || string.IsNullOrEmpty(response.Body))
+        var room = await rooms.GetOneAsync(r => r.MembersId.Contains(userId));
+        if (room is null)
         {
-            _logger.LogWarning("Could not fetch users: " + response.Errors);
-            return [];
+            _logger.LogInformation("User does not have a room");
+            return;
         }
 
-        return JsonSerializer.Deserialize<List<UserDto>>(response.Body, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        room.MembersId.Remove(userId);
+        await rooms.ReplaceAsync(room);
+
+        _logger.LogInformation($"User:{userId} was removed from Dormitory:{room.DormitoryId}, Room:{room.Id}");
     }
 
-    /*    private async Task<List<User>?> FetchAllUsers()
-        {
-            var responseByRole = await _usersService.GetUsersByRoleAsync(new UsersRoleRequest { Role = "campus_student" });
-
-            if (!responseByRole.Success || string.IsNullOrEmpty(responseByRole.Body))
-            {
-                _logger.LogWarning("Could not fetch users by role 'campus_student': {Errors}", responseByRole.Errors);
-                return null;
-            }
-
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-            var users = new List<User>();
-
-            try
-            {
-                using var doc = JsonDocument.Parse(responseByRole.Body);
-                if (doc.RootElement.ValueKind != JsonValueKind.Array)
-                {
-                    _logger.LogWarning("Users response JSON is not an array");
-                    return users;
-                }
-
-                foreach (var el in doc.RootElement.EnumerateArray())
-                {
-                    bool isCampusStudent = false;
-
-                    if (el.TryGetProperty("Role", out var roleProp))
-                    {
-                        if (roleProp.ValueKind == JsonValueKind.String)
-                        {
-                            var rv = roleProp.GetString();
-                            if (!string.IsNullOrEmpty(rv) &&
-                                (rv.Equals("CAMPUS_STUDENT", StringComparison.OrdinalIgnoreCase) ||
-                                 rv.Equals("campus_student", StringComparison.OrdinalIgnoreCase)))
-                            {
-                                isCampusStudent = true;
-                            }
-                            else if (!isCampusStudent && int.TryParse(rv, out var rn) && rn == (int)UserType.CAMPUS_STUDENT)
-                            {
-                                isCampusStudent = true;
-                            }
-                        }
-                        else if (roleProp.ValueKind == JsonValueKind.Number && roleProp.TryGetInt32(out var rint))
-                        {
-                            if (rint == (int)UserType.CAMPUS_STUDENT) isCampusStudent = true;
-                        }
-                    }
-
-                    try
-                    {
-                        if (isCampusStudent)
-                        {
-                            var cs = JsonSerializer.Deserialize<CampusStudent>(el.GetRawText(), options);
-                            if (cs != null) users.Add(cs);
-                            else
-                            {
-                                var fallback = JsonSerializer.Deserialize<User>(el.GetRawText(), options);
-                                if (fallback != null) users.Add(fallback);
-                            }
-                        }
-                        else
-                        {
-                            var u = JsonSerializer.Deserialize<User>(el.GetRawText(), options);
-                            if (u != null) users.Add(u);
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.LogWarning(ex, "Failed to deserialize a user element; skipping");
-                    }
-                }
-
-                return users;
-            }
-            catch (JsonException ex)
-            {
-                _logger.LogError(ex, "Failed to parse users response JSON");
-                return null;
-            }
-        }
-    */
-    public async Task<Accommodation> CreateAccommodationAsync(string name, string description, int openTime, int closeTime)
+    public async Task<Accommodation> CreateAccommodationAsync(string name, string description)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -483,21 +342,10 @@ public class CampusServiceImplementation(
             throw new BadRequestException("Accommodation name cannot be empty");
         }
 
-        if (openTime < 0 || openTime > 24 || closeTime < 0 || closeTime > 24)
-        {
-            _logger.LogInformation("Invalid open/close time provided");
-            throw new BadRequestException("OpenTime and CloseTime must be between 0 and 24");
-        }
-
         var accommodation = new Accommodation
         {
             Name = name,
-            Description = description ?? string.Empty,
-            Timetable = new Scheddule
-            {
-                OpenTime = openTime,
-                CloseTime = closeTime
-            }
+            Description = description ?? string.Empty
         };
 
         var col = await _accommodations;
@@ -579,71 +427,7 @@ public class CampusServiceImplementation(
         return issue;
     }
 
-    public bool IsCardNumberFormatValid(string cardNumber)
-    {
-        if (string.IsNullOrWhiteSpace(cardNumber)) return false;
-
-        string cleanNumber = cardNumber.Replace(" ", "").Replace("-", "");
-
-        return System.Text.RegularExpressions.Regex.IsMatch(cleanNumber, @"^\d{16}$");
-    }
-
-    public bool IsLuhnValid(string cardNumber)
-    {
-        int sum = 0;
-        bool alternate = false;
-        for (int i = cardNumber.Length - 1; i >= 0; i--)
-        {
-            char c = cardNumber[i];
-            if (!char.IsDigit(c)) return false; 
-
-            int n = c - '0'; 
-
-            if (alternate)
-            {
-                n *= 2;
-                if (n > 9) n -= 9; 
-            }
-
-            sum += n;
-            alternate = !alternate;
-        }
-
-        return (sum % 10 == 0);
-    }
-
-    public bool IsCvvValid(string cvv)
-    {
-        if (string.IsNullOrWhiteSpace(cvv)) return false;
-
-        return System.Text.RegularExpressions.Regex.IsMatch(cvv.Trim(), @"^\d{3}$");
-    }
-
-    public bool IsNotExpired(string expirationString)
-    {
-        if (string.IsNullOrWhiteSpace(expirationString)) return false;
-
-        expirationString = expirationString.Trim();
-
-        var parts = expirationString.Split('/');
-        if (parts.Length != 2) return false; 
-
-        if (!int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
-        {
-            return false; 
-        }
-
-        if (month < 1 || month > 12) return false;
-
-        int fullYear = year < 100 ? 2000 + year : year;
-
-        int lastDay = DateTime.DaysInMonth(fullYear, month);
-        var cardExpiry = new DateTime(fullYear, month, lastDay, 23, 59, 59);
-
-        return cardExpiry > DateTime.Now;
-    }
-
-    public async Task<Payment> CreatePaymentAsync(string userId, double amount,string cardNumber,string expDate,string cvv)
+    public async Task<Payment> CreatePaymentAsync(string userId, double amount, string cardNumber, string expDate, string cvv)
     {
         if (string.IsNullOrWhiteSpace(userId))
         {
@@ -692,10 +476,8 @@ public class CampusServiceImplementation(
         {
             userName = payload.GetString("Name") ?? userName;
         }
-        catch { /* ignore - fallback to default */ }
+        catch { }
 
-        
-        
         var maybeEmail = payload.GetString("Email");
         if (!string.IsNullOrWhiteSpace(maybeEmail))
         {
@@ -704,8 +486,7 @@ public class CampusServiceImplementation(
         else
         {
             throw new BadRequestException("The user doesn't have an email set!");
-        }        
-        
+        }
 
         var payment = new Payment
         {
@@ -733,7 +514,7 @@ public class CampusServiceImplementation(
             {
                 ToEmail = userEmail,
                 ToName = userName ?? string.Empty,
-                TemplateName = "Payment", 
+                TemplateName = "Payment",
                 TemplateData = templateData
             };
 
@@ -755,6 +536,70 @@ public class CampusServiceImplementation(
         return payment;
     }
 
+    private bool IsCardNumberFormatValid(string cardNumber)
+    {
+        if (string.IsNullOrWhiteSpace(cardNumber)) return false;
+
+        string cleanNumber = cardNumber.Replace(" ", "").Replace("-", "");
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cleanNumber, @"^\d{16}$");
+    }
+
+    private bool IsLuhnValid(string cardNumber)
+    {
+        int sum = 0;
+        bool alternate = false;
+        for (int i = cardNumber.Length - 1; i >= 0; i--)
+        {
+            char c = cardNumber[i];
+            if (!char.IsDigit(c)) return false; 
+
+            int n = c - '0'; 
+
+            if (alternate)
+            {
+                n *= 2;
+                if (n > 9) n -= 9; 
+            }
+
+            sum += n;
+            alternate = !alternate;
+        }
+
+        return (sum % 10 == 0);
+    }
+
+    private bool IsCvvValid(string cvv)
+    {
+        if (string.IsNullOrWhiteSpace(cvv)) return false;
+
+        return System.Text.RegularExpressions.Regex.IsMatch(cvv.Trim(), @"^\d{3}$");
+    }
+
+    private bool IsNotExpired(string expirationString)
+    {
+        if (string.IsNullOrWhiteSpace(expirationString)) return false;
+
+        expirationString = expirationString.Trim();
+
+        var parts = expirationString.Split('/');
+        if (parts.Length != 2) return false; 
+
+        if (!int.TryParse(parts[0], out int month) || !int.TryParse(parts[1], out int year))
+        {
+            return false; 
+        }
+
+        if (month < 1 || month > 12) return false;
+
+        int fullYear = year < 100 ? 2000 + year : year;
+
+        int lastDay = DateTime.DaysInMonth(fullYear, month);
+        var cardExpiry = new DateTime(fullYear, month, lastDay, 23, 59, 59);
+
+        return cardExpiry > DateTime.Now;
+    }
+
     internal static async Task<IDatabaseCollection<Accommodation>> GetAccommodationsCollection(IDatabase database)
     {
         var collection = database.GetCollection<Accommodation>();
@@ -763,10 +608,11 @@ public class CampusServiceImplementation(
 
         CreateIndexModel<Accommodation> index1 = new(nameIndex, new CreateIndexOptions
         {
-            Name = "accommodationNameIndex"
+            Name = "accommodationNameIndex",
+            Unique = true
         });
 
-        await collection.MongoCollection.Indexes.CreateManyAsync(new[] { index1 });
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
         return collection;
     }
 
@@ -781,7 +627,7 @@ public class CampusServiceImplementation(
             Name = "dormitoryNameIndex"
         });
 
-        await collection.MongoCollection.Indexes.CreateManyAsync(new[] { index1 });
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
         return collection;
     }
 
@@ -802,7 +648,7 @@ public class CampusServiceImplementation(
             Name = "roomNumberIndex"
         });
 
-        await collection.MongoCollection.Indexes.CreateManyAsync(new[] { index1, index2 });
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1, index2]);
         return collection;
     }
 
@@ -817,7 +663,7 @@ public class CampusServiceImplementation(
             Name = "paymentUserIndex"
         });
 
-        await collection.MongoCollection.Indexes.CreateManyAsync(new[] { index1 });
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
         return collection;
     }
 
@@ -832,19 +678,11 @@ public class CampusServiceImplementation(
             Name = "issueIssuerIndex"
         });
 
-        await collection.MongoCollection.Indexes.CreateManyAsync(new[] { index1 });
+        await collection.MongoCollection.Indexes.CreateManyAsync([index1]);
         return collection;
     }
 }
 
-public class UserDto
-{
-    public string? Id { get; set; }
-    public string? Email { get; set; }
-    public string? Name { get; set; }
-    public int? Role { get; set; }
-    public string RoleString => Role?.ToString() ?? string.Empty;
-}
 public class ExcelData
 {
     public List<string> Headers { get; set; } = new();

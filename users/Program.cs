@@ -1,12 +1,15 @@
-using Serilog;
-using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
-using users;
+using commons.Database;
+using commons.EventBase;
+using commons.RequestBase;
 using emailServiceClient;
 using excelServiceClient;
-using commons.RequestBase;
-using commons.Database;
+using MassTransit;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Serilog;
+using System.Net;
+using users;
 using users.Implementation;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +34,25 @@ string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
 string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
 
 builder.Services.AddMongoDatabase(connectionString + databaseName, databaseName);
+
+builder.Services.AddMassTransit(x =>
+{
+    var myAssembly = Assembly.GetExecutingAssembly();
+
+    x.AddConsumers(myAssembly);
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+        cfg.RegisterConsumers(context, myAssembly, "chat");
+    });
+});
+
+builder.Services.AddSingleton<IScopedMessagePublisher, ScopedMessagePublisher>();
 
 builder.Services.AddGrpcClient<emailService.emailServiceClient>(o =>
 {

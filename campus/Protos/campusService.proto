@@ -16,17 +16,16 @@ service campusService
     rpc CreatePayment (CreatePaymentRequest) returns (commons.protos.MessageResponse);
 
     rpc ReportIssue (ReportIssueRequest) returns (commons.protos.MessageResponse);
+
+    rpc GetAccommodationById (GetAccByIdRequest) returns (commons.protos.MessageResponse);
+    rpc GetAccommodations (GetAccsRequest) returns (commons.protos.MessageResponse);
 }
 
 message CreateAccommodationRequest
 {
     string name = 1;
     string description = 2;
-    int32 openTime = 3; 
-    int32 closeTime = 4;
 }
-
-
 
 message GenerateDistributionRequest
 {
@@ -47,4 +46,14 @@ message ReportIssueRequest
     string issuerId = 1;
     string location = 2; 
     string description = 3;
+}
+
+message GetAccByIdRequest
+{
+    string id = 1;
+}
+
+message GetAccsRequest
+{
+    optional string empty = 1;
 }

@@ -1,13 +1,17 @@
-using Serilog;
-using System.Net;
-using Microsoft.AspNetCore.Server.Kestrel.Core;
 using campus;
 using campus.Implementation;
+using commons.Database;
 using commons.RequestBase;
-using usersServiceClient;
 using emailServiceClient;
 using excelServiceClient;
-using commons.Database;
+using MassTransit;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Serilog;
+using System.Diagnostics;
+using System.Net;
+using usersServiceClient;
+using commons.EventBase;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +30,22 @@ builder.WebHost.ConfigureKestrel(serverOptions =>
     });
 });
 
+builder.Services.AddMassTransit(x =>
+{
+    var myAssembly = Assembly.GetExecutingAssembly();
+
+    x.AddConsumers(myAssembly);
+
+    x.UsingRabbitMq((context, cfg) =>
+    {
+        cfg.Host("rabbitmq", "/", h =>
+        {
+            h.Username("guest");
+            h.Password("guest");
+        });
+        cfg.RegisterConsumers(context, myAssembly, "campus");
+    });
+});
 
 string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
 string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
@@ -65,6 +85,26 @@ builder.Services.AddScoped<ServiceInterceptor>();
 builder.Services.AddSingleton<CampusServiceImplementation>();
 
 var app = builder.Build();
+
+try
+{
+    var serviceImpl = app.Services.GetRequiredService<CampusServiceImplementation>();
+
+    string? filePath = builder.Configuration["CampusConfig:CampusExcelPath"];
+    string? fileName = builder.Configuration["CampusConfig:CampusExcelName"];
+
+    if (filePath is null || fileName is null)
+    {
+        return;
+    }
+
+    await serviceImpl.GenerateCampusAsync(filePath, fileName);
+}
+catch (Exception ex)
+{
+    Debug.WriteLine(ex);
+    return;
+}
 
 app.MapGrpcService<CampusService>();
 

@@ -9,8 +9,6 @@ public class CreateAccommodationReq
 {
     public string Name { get; set; } = default!;
     public string Description { get; set; } = default!;
-    public int OpenTime { get; set; } = default!;
-    public int CloseTime { get; set; } = default!;
 }
 
 public class CreateAccommodation(ILogger<CreateAccommodation> logger) : CampusEndpoint<CreateAccommodationReq>(logger)
@@ -36,9 +34,7 @@ public class CreateAccommodation(ILogger<CreateAccommodation> logger) : CampusEn
         var grpcRequest = new CreateAccommodationRequest
         {
             Name = req.Name,
-            Description = req.Description ?? string.Empty,
-            OpenTime = req.OpenTime,
-            CloseTime = req.CloseTime
+            Description = req.Description ?? string.Empty
         };
 
         MessageResponse grpcResponse = await Client.CreateAccommodationAsync(grpcRequest, null, null, cancellationToken);

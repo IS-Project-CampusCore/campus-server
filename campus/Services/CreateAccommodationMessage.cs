@@ -13,6 +13,6 @@ public class CreateAccommodationMessage(
     private readonly CampusServiceImplementation _impl = implementation;
 
     protected override async Task<Accommodation> HandleMessage(CreateAccommodationRequest request, CancellationToken token) 
-        => await _impl.CreateAccommodationAsync(request.Name,request.Description,request.OpenTime,request.CloseTime);
+        => await _impl.CreateAccommodationAsync(request.Name, request.Description);
 
 }

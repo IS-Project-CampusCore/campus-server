@@ -39,3 +39,12 @@ public partial class CreateAccommodationRequest : IRequestBase
     }
 }
 
+public partial class GetAccByIdRequest : IRequestBase
+{
+    public string? Validate() => string.IsNullOrEmpty(Id) ? "Get Accomodation by Id cannot be empty" : null;
+}
+
+public partial class GetAccsRequest : IRequestBase
+{
+    public string? Validate() => null;
+}

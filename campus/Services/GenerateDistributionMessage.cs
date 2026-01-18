@@ -11,7 +11,7 @@ public class GenerateDistributionMessage(
 {
     private readonly CampusServiceImplementation _impl = implementation;
 
-    protected override async Task HandleMessage(GenerateDistributionRequest request, CancellationToken token)
-        => await _impl.GenerateDistributionAsync(request.Placeholder);
+    protected override Task HandleMessage(GenerateDistributionRequest request, CancellationToken token)
+        => Task.CompletedTask;
 
 }
