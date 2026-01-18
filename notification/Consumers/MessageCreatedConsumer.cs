@@ -30,6 +30,7 @@ public class MessageCreatedConsumer(
     public static string Message => "NewMessage";
     public static object Content => new
     {
+        Group = "Group's Id",
         From = "Sender's Id",
         Content = "Text Content",
         Files = new[] { "File 1 Id", "File 2 Id" },
@@ -56,6 +57,7 @@ public class MessageCreatedConsumer(
             Message,
             new
             {
+                Group = groupId,
                 From = senderId,
                 Content = content,
                 Files = filesId,

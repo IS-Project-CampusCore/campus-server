@@ -28,6 +28,7 @@ public class SystemMessageConsumer(
     public static string Message => "SystemMessage";
     public static object Content => new
     {
+        Group = "Group's Id",
         From = "Sender Id",
         PublicContent = "Public Text Message",
         At = "Time"
@@ -53,6 +54,7 @@ public class SystemMessageConsumer(
             "SystemMessage",
             new
             {
+                Group = groupId,
                 From = subjectId,
                 PublicContent = publicContent,
                 At = sentAt,

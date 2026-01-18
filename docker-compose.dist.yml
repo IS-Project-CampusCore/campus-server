@@ -1,3 +1,5 @@
+version: '3.8'
+
 volumes:
   mongo_data:
 
@@ -6,6 +8,7 @@ networks:
     driver: bridge
 
 services:
+  # --- Standard Dependencies (Downloaded Automatically) ---
   mongo:
     image: mongo:latest
     restart: always
@@ -13,7 +16,9 @@ services:
     ports:
       - "27017:27017"
     volumes:
-      - mongo_data:/data/db
+      - mongo_data:/data/db # SAVES DATA TO USER'S PC AUTOMATICALLY
+    logging:
+      driver: none
     networks:
       - campus-network
 
@@ -32,14 +37,30 @@ services:
     networks:
       - campus-network
 
+  seq:
+    image: datalust/seq:latest
+    restart: always
+    ports:
+      - "5342:80"
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    logging:
+      driver: none
+    tmpfs:
+      - /data
+    networks:
+      - campus-network
+
+  # --- Your Custom Apps (Downloaded from your Docker Hub) ---
+  # REPLACE 'bocadoru' with your actual account name!
+
   http:
-    build:
-      context: .
-      dockerfile: ./http/Dockerfile
+    image: bocadoru/campus-http:latest
     ports:
       - "8080:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production # Switch to Production
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
@@ -50,10 +71,6 @@ services:
       - GrpcServices__CampusService=http://campus:8080 
       - SecretKey=a_very_secret_key_that_must_be_long_and_complex
       - Logging__SeqUrl=http://seq
-      - Logging__LogLevel__Default=Information
-      - Logging__LogLevel__Microsoft.AspNetCore=Warning
-      - Logging__LogLevel__System.Net.Http=Warning
-      - Logging__LogLevel__Grpc=Warning
     depends_on:
       - users
       - email
@@ -67,27 +84,12 @@ services:
     networks:
       - campus-network
 
-  seq:
-    image: datalust/seq:latest
-    restart: always
-    ports:
-      - "5342:80"
-    environment:
-      - ACCEPT_EULA=Y
-      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
-    tmpfs:
-      - /data
-    networks:
-      - campus-network
-
   users:
-    build:
-      context: .
-      dockerfile: ./users/Dockerfile
+    image: bocadoru/campus-users:latest
     ports:
       - "8086:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - GrpcServices__EmailService=http://email:8080 
       - GrpcServices__ExcelService=http://excel:8080
       - Logging__SeqUrl=http://seq
@@ -98,58 +100,41 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      email:
-        condition: service_started
-      excel:
-        condition: service_started
-      seq:
-        condition: service_started
       mongo:
         condition: service_started
     networks:
       - campus-network
 
   email:
-    build:
-      context: .
-      dockerfile: ./email/Dockerfile
+    image: bocadoru/campus-email:latest
     ports:
       - "8082:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - Logging__SeqUrl=http://seq
-    depends_on:
-      - seq
     networks:
       - campus-network
   
   excel:
-    build:
-      context: .
-      dockerfile: ./excel/Dockerfile
+    image: bocadoru/campus-excel:latest
     ports:
       - "8083:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - Logging__SeqUrl=http://seq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=excel
-    depends_on:
-      - seq
-      - mongo
     volumes:
-      - ./FileStorage:/app/FileStorage
+      - ./FileStorage:/app/FileStorage # Creates this folder on User's PC
     networks:
       - campus-network
   
   chat:
-    build:
-      context: .
-      dockerfile: ./chat/Dockerfile
+    image: bocadoru/campus-chat:latest
     ports:
       - "8084:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - GrpcServices__UsersService=http://users:8080
       - Logging__SeqUrl=http://seq
       - RabbitMq__Host=rabbitmq
@@ -158,10 +143,6 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      seq:
-        condition: service_started
-      users:
-        condition: service_started
       mongo:
         condition: service_started
     volumes:
@@ -170,14 +151,12 @@ services:
       - campus-network
 
   notification:
-    build:
-      context: .
-      dockerfile: ./notification/Dockerfile
+    image: bocadoru/campus-notification:latest
     ports:
       - "8085:8080"
       - "8081:8081"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - GrpcServices__ChatService=http://chat:8080
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080
@@ -187,83 +166,56 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      seq:
-        condition: service_started
-      chat:
-        condition: service_started
-      email:
-        condition: service_started
     networks:
       - campus-network
 
-
   announcements:
-    build:
-      context: .
-      dockerfile: ./announcements/Dockerfile
+    image: bocadoru/campus-announcements:latest
     ports:
       - "8087:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - Logging__SeqUrl=http://seq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=announcements
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080 
-    depends_on:
-      - seq
-      - mongo
-      - users
-      - email
     networks:
       - campus-network
 
   grades:
-    build:
-      context: .
-      dockerfile: ./grades/Dockerfile
+    image: bocadoru/campus-grades:latest
     ports:
       - "8089:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__ExcelService=http://excel:8080
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=grades
       - Logging__SeqUrl=http://seq
-    depends_on:
-      - seq
-      - mongo
-      - users
-      - excel
     networks:
       - campus-network
 
   schedule:
-    build:
-      context: .
-      dockerfile: ./schedule/Dockerfile
+    image: bocadoru/campus-schedule:latest
     ports:
       - "8090:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - GrpcServices__ExcelService=http://excel:8080
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=schedules
       - Logging__SeqUrl=http://seq
-    depends_on:
-      - seq
     networks:
       - campus-network
 
   campus:
-    build:
-      context: .
-      dockerfile: ./campus/Dockerfile
+    image: bocadoru/campus-campus:latest
     ports:
       - "8088:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - Logging__SeqUrl=http://seq
       - CampusConfig__CampusExcelPath=/app/FileStorage/ExcelFiles
       - CampusConfig__CampusExcelName=DormitoryData_ServiceConfig.xlsx
@@ -276,15 +228,7 @@ services:
     depends_on:
       rabbitmq:
         condition: service_healthy
-      seq:
-        condition: service_started
       mongo:
-        condition: service_started
-      excel:
-        condition: service_started
-      users:
-        condition: service_started
-      email:
         condition: service_started
     volumes:
       - ./FileStorage:/app/FileStorage
