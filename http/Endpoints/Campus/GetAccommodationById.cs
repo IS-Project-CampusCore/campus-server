@@ -13,7 +13,7 @@ public class GetAccommodationById(ILogger<ReportIssue> logger) : CampusEndpoint<
         Get("api/campus/acc");
         Policies(CampusPolicy.AuthenticatedUser);
 
-        Roles("campus_student");
+        Roles("campus_student", "management");
     }
 
     public override async Task HandleAsync(string req, CancellationToken cancellationToken)

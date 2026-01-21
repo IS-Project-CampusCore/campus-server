@@ -14,7 +14,7 @@ public class GetAccommodations(ILogger<ReportIssue> logger) : CampusEndpoint(log
         Get("api/campus/accs");
         Policies(CampusPolicy.AuthenticatedUser);
 
-        Roles("campus_student");
+        Roles("campus_student", "management");
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)
