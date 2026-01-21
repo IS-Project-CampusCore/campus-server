@@ -13,7 +13,6 @@ public class GetAnnouncements(ILogger<EditAnnouncement> logger) : CampusEndpoint
     {
         Get("api/announcements/announcements");
         Policies(CampusPolicy.AuthenticatedUser);
-        Roles("management");
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)
