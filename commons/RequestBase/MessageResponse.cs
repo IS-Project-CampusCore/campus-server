@@ -170,6 +170,11 @@ public readonly struct MessageBody
         throw new ArgumentException($"Message body is not a valid bool");
     }
 
+    public readonly byte Byte() => ValidateJsonOrThrow(JsonValueKind.Number).GetByte();
+
+    public readonly byte[] BytesFromBase64() =>
+        ValidateJsonOrThrow(JsonValueKind.String).GetBytesFromBase64();
+
     public readonly string? TryString() => Validate(JsonValueKind.String) ? _json.GetString() : null;
    
     public readonly int? TryInt32() => Validate(JsonValueKind.Number) ? _json.GetInt32() : null;
@@ -232,6 +237,9 @@ public readonly struct MessageBody
     public readonly MessageBody GetArray(string property) =>
         new(GetPropertyAndValidate(property, JsonValueKind.Array));
 
+    public readonly byte[] GetBytesFromBase64(string property) =>
+        GetPropertyAndValidate(property, JsonValueKind.String).GetBytesFromBase64();
+
     public readonly bool GetBool(string property)
     {
         if (!TryGetProperty(property).HasValue)
@@ -254,6 +262,7 @@ public readonly struct MessageBody
         return _json.EnumerateArray().Select(json => new MessageBody(json));
     }
     public readonly IEnumerable<string> IterateStrings() => Iterate().Select(e => e.String());
+    public readonly IEnumerable<byte> IterateBytes() => Iterate().Select(e => e.Byte());
 
     private readonly JsonElement GetPropertyAndValidate(string propertyName, JsonValueKind expectedKind)
     {

@@ -10,3 +10,5 @@ public record ChatFile : DatabaseModel
     public string FilePath { get; set; } = string.Empty;
     public DateTime UploadedAt { get; set; } = DateTime.UtcNow;
 }
+
+public record FileResponse(string FileName, byte[] Data);

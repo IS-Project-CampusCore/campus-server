@@ -1,6 +1,7 @@
-﻿using http.Auth;
-using chatServiceClient;
+﻿using chatServiceClient;
 using commons.Protos;
+using http.Auth;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace http.Endpoints.Chat;
 
@@ -30,6 +31,23 @@ public class GetFile(ILogger<GetFile> logger) : CampusEndpoint<string>(logger)
         };
 
         MessageResponse grpcResponse = await Client.GetFileAsync(grpcRequest, null, null, cancellationToken);
-        await SendAsync(grpcResponse, cancellationToken);
+        if (grpcResponse is null || string.IsNullOrEmpty(grpcResponse.Body))
+        {
+            await HandleErrorsAsync(grpcResponse?.Code ?? 500, grpcResponse?.Errors ?? "Internal Error", cancellationToken);
+            return;
+        }
+
+        var payload = grpcResponse.Payload;
+        string fileName = payload.GetString("FileName");
+        byte[] data = payload.GetBytesFromBase64("Data");
+
+        var provider = new FileExtensionContentTypeProvider();
+
+        if (!provider.TryGetContentType(fileName, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+
+        await Send.BytesAsync(data, fileName, contentType, null, false, cancellationToken);
     }
 }
