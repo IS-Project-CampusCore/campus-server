@@ -23,8 +23,8 @@ public interface IChatService
     Task<IEnumerable<string>> GetGroupMembersAsync(string groupId);
 
     Task<ChatFile> UploadFileAsync(string name, string groupId, byte[] data);
-    Task<byte[]> GetFileByIdAsync(string fileId);
-    Task<IEnumerable<byte[]>?> GetFilesByMessageIdAsync(string messageId);
+    Task<FileResponse> GetFileByIdAsync(string fileId);
+    Task<IEnumerable<FileResponse>?> GetFilesByMessageIdAsync(string messageId);
 
     Task<ChatMessage> SendMessageAsync(string senderId, string groupId, string? content, List<string> filesId);
     Task<IEnumerable<ChatMessage>> GetMessagesAsync(string reciverId, string groupId, int skip, int limit);
@@ -289,7 +289,7 @@ public class ChatServiceImplementation(
         return file;
     }
 
-    public async Task<byte[]> GetFileByIdAsync(string fileId)
+    public async Task<FileResponse> GetFileByIdAsync(string fileId)
     {
         var files = await _files;
 
@@ -306,7 +306,7 @@ public class ChatServiceImplementation(
             using MemoryStream ms = new();
             await fileStream.CopyToAsync(ms);
 
-            return ms.ToArray();
+            return new FileResponse(file.FileName, ms.ToArray());
         }
         catch (FileNotFoundException)
         {
@@ -326,7 +326,7 @@ public class ChatServiceImplementation(
         }
     }
 
-    public async Task<IEnumerable<byte[]>?> GetFilesByMessageIdAsync(string messageId)
+    public async Task<IEnumerable<FileResponse>?> GetFilesByMessageIdAsync(string messageId)
     {
         var messages = await _messages;
 
@@ -343,7 +343,7 @@ public class ChatServiceImplementation(
             return null;
         }
 
-        List<byte[]> files = [];
+        List<FileResponse> files = [];
         foreach (var fileId in message.FilesId)
         {
             var file = await GetFileByIdAsync(fileId);
