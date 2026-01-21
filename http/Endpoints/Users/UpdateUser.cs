@@ -15,7 +15,7 @@ public class UpdateUser(ILogger<UpdateUser> logger) : CampusEndpoint<UpdateApiRe
         Post("api/users/update");
         Policies(CampusPolicy.AuthenticatedUser);
 
-        Roles("management");
+        Roles("management", "admin");
     }
 
     public override async Task HandleAsync(UpdateApiRequest req, CancellationToken cancellationToken)

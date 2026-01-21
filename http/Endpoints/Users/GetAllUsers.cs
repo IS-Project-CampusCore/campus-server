@@ -1,5 +1,6 @@
 ﻿using commons.Protos;
 using FastEndpoints;
+using http.Auth;
 using usersServiceClient;
 
 namespace http.Endpoints.Users;
@@ -11,7 +12,7 @@ public class GetAllUsers(ILogger<GetAllUsers> logger) : CampusEndpoint<EmptyRequ
     public override void Configure()
     {
         Get("api/users/all");
-        AllowAnonymous();
+        Policies(CampusPolicy.AuthenticatedUser);
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken cancellationToken)

@@ -75,6 +75,8 @@ services:
     environment:
       - ACCEPT_EULA=Y
       - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    logging:
+      driver: none
     tmpfs:
       - /data
     networks:

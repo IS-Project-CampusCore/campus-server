@@ -5,33 +5,30 @@ using usersServiceClient;
 
 namespace http.Endpoints.Users;
 
-
-public class DeleteAccountExtern(ILogger<DeleteAccount> logger) : CampusEndpoint<string>(logger)
+public class GetUsersByRole(ILogger<GetUsersByRole> logger) : CampusEndpoint<string>(logger)
 {
     public usersService.usersServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
-        Delete("api/users/delete-ext");
+        Get("api/users/role");
         Policies(CampusPolicy.AuthenticatedUser);
-
-        Roles("management", "admin");
     }
 
     public override async Task HandleAsync(string req, CancellationToken cancellationToken)
     {
         if (string.IsNullOrEmpty(req))
         {
-            await HandleErrorsAsync(401, "User ID not found in token", cancellationToken);
+            await HandleErrorsAsync(400, "User Role not found", cancellationToken);
             return;
         }
 
-        var grpcRequest = new DeleteAccountRequest
+        var grpcRequest = new UsersRoleRequest
         {
-            UserId = req
+            Role = req
         };
 
-        MessageResponse response = await Client.DeleteAccountAsync(grpcRequest, null, null, cancellationToken);
+        MessageResponse response = await Client.GetUsersByRoleAsync(grpcRequest, null, null, cancellationToken);
         await SendAsync(response, cancellationToken: cancellationToken);
     }
 }
