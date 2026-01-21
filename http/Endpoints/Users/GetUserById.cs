@@ -1,17 +1,18 @@
 ﻿using commons.Protos;
 using FastEndpoints;
+using http.Auth;
 using usersServiceClient;
 
 namespace http.Endpoints.Users;
 
-public class GetUserById(ILogger<GetAllUsers> logger) : CampusEndpoint<string>(logger)
+public class GetUserById(ILogger<GetUserById> logger) : CampusEndpoint<string>(logger)
 {
     public usersService.usersServiceClient Client { get; set; } = default!;
 
     public override void Configure()
     {
         Get("api/users/user");
-        AllowAnonymous();
+        Policies(CampusPolicy.AuthenticatedUser);
     }
 
     public override async Task HandleAsync(string req, CancellationToken cancellationToken)
