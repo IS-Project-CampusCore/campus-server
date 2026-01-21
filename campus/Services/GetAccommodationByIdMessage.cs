@@ -5,13 +5,13 @@ using commons.RequestBase;
 
 namespace campus.Services;
 
-public class GetAccommodationsMessage(
-ILogger<GetAccommodationsMessage> logger,
+public class GetAccommodationByIdMessage(
+ILogger<GetAccommodationByIdMessage> logger,
 CampusServiceImplementation implementation
-) : CampusMessage<GetAccByIdRequest, List<Accommodation>>(logger)
+) : CampusMessage<GetAccByIdRequest, Accommodation?>(logger)
 {
     private readonly CampusServiceImplementation _impl = implementation;
 
-    protected override async Task<List<Accommodation>> HandleMessage(GetAccByIdRequest request, CancellationToken token)
-        => await _impl.GetAccommodations();
+    protected override async Task<Accommodation?> HandleMessage(GetAccByIdRequest request, CancellationToken token)
+        => await _impl.GetAccommodationById(request.Id);
 }
