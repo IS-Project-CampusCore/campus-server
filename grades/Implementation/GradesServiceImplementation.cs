@@ -120,7 +120,7 @@ public class GradesServiceImplementation(
         string userName = payload.GetString("Name");
         int userRole = payload.GetInt32("Role");
 
-        if (userRole != 3)
+        if (userRole != 3 && userRole != 5)
         {
             _logger.LogInformation("User does not have 'student' role");
             throw new ForbiddenException("User is requiered to have 'Student' role to be added in a course");
