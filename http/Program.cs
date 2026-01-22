@@ -50,12 +50,20 @@ builder.Services.AddGrpcClient<excelService.excelServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:ExcelService"];
     o.Address = new Uri(address!);
+})
+.ConfigureChannel(options =>
+{
+    options.MaxReceiveMessageSize = 50 * 1024 * 1024;
 });
 
 builder.Services.AddGrpcClient<chatService.chatServiceClient>(o =>
 {
     string? address = builder.Configuration["GrpcServices:ChatService"];
     o.Address = new Uri(address!);
+})
+.ConfigureChannel(options =>
+{
+    options.MaxReceiveMessageSize = 50 * 1024 * 1024;
 });
 
 builder.Services.AddGrpcClient<announcementsService.announcementsServiceClient>(o =>
