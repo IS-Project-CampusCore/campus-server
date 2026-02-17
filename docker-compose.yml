@@ -48,7 +48,7 @@ services:
       - GrpcServices__GradesService=http://grades:8080 
       - GrpcServices__ScheduleService=http://schedule:8080 
       - GrpcServices__CampusService=http://campus:8080 
-      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
+      - SecretKey=${SECRET_KEY}
       - Logging__SeqUrl=http://seq
       - Logging__LogLevel__Default=Information
       - Logging__LogLevel__Microsoft.AspNetCore=Warning
@@ -96,7 +96,8 @@ services:
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=users
       - RabbitMq__Host=rabbitmq
-      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
+      - SecretKey=${SECRET_KEY}
+      - MediatR__LicenseKey=${MEDIATR_KEY}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -119,7 +120,12 @@ services:
       - "8082:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - Logging__SeqUrl=http://seq
+      - BrevoSettings__ApiKey=${BREVO_API_KEY}
+      - BrevoSettings__ApiUrl=https://api.brevo.com/v3/smtp/email
+      - BrevoSettings__EmailFrom=${BREVO_EMAIL}
+      - BrevoSettings__SenderName=CampusCore
     depends_on:
       - seq
     networks:
@@ -133,6 +139,7 @@ services:
       - "8083:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - Logging__SeqUrl=http://seq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=excel
@@ -153,6 +160,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - GrpcServices__UsersService=http://users:8080
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - Logging__SeqUrl=http://seq
       - RabbitMq__Host=rabbitmq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
@@ -183,7 +191,8 @@ services:
       - GrpcServices__ChatService=http://chat:8080
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__EmailService=http://email:8080
-      - SecretKey=a_very_secret_key_that_must_be_long_and_complex
+      - MediatR__LicenseKey=${MEDIATR_KEY}
+      - SecretKey=${SECRET_KEY}
       - Logging__SeqUrl=http://seq
       - RabbitMq__Host=rabbitmq
     depends_on:
@@ -207,6 +216,7 @@ services:
       - "8087:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - Logging__SeqUrl=http://seq
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=announcements
@@ -228,6 +238,7 @@ services:
       - "8089:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - GrpcServices__UsersService=http://users:8080
       - GrpcServices__ExcelService=http://excel:8080
       - MongoDB__ConnectionString=mongodb://mongo:27017/
@@ -249,6 +260,7 @@ services:
       - "8090:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - GrpcServices__ExcelService=http://excel:8080
       - MongoDB__ConnectionString=mongodb://mongo:27017/
       - MongoDB__DatabaseName=schedules
@@ -266,6 +278,7 @@ services:
       - "8088:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - MediatR__LicenseKey=${MEDIATR_KEY}
       - Logging__SeqUrl=http://seq
       - CampusConfig__CampusExcelPath=/app/FileStorage/ExcelFiles
       - CampusConfig__CampusExcelName=DormitoryData_ServiceConfig.xlsx

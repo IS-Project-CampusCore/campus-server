@@ -642,7 +642,7 @@ public class UsersServiceImplementation(
         if (!response.Success)
         {
             _logger.LogError($"SendEmail failed: {response.Errors}");
-            throw new InternalErrorException("Could not send reset email.");
+            throw new InternalErrorException("Could not send verify code email.");
         }
     }
 
