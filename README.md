@@ -107,6 +107,7 @@ It uses *HTTP1.1 Requests* for Client-to-Server communication and *HTTP2** for S
 
 * As explained above, this communication uses **HTTP1.1** for *REST API* requests.
 * This project uses **FastEndpoints NuGet Packedge** for the endpoints aggregation.
+* **Endpoint abstraction classes**: ```CampusEndpointBase``` & ```CampusEndpoint``` used to implement common parts of REST API Requests and Responses using FastEndpoint NuGet Packedge.
 * It has a **JWT Bearer Token** schema for secure requests authentication.
 
 * For debuging and testing the API Gateway you can use any API tasting tool like *Postman* or *Insomnia*.
@@ -114,7 +115,13 @@ It uses *HTTP1.1 Requests* for Client-to-Server communication and *HTTP2** for S
 #### 2. Service-to-Service communication
 
 * The API Gateway does not expose any **gRPC Servers**, it is designed to be a **gRPC Client** for every service that has an endpoint implemented.
-* For more information about the actual communication design and implementation go to [**gRPC Communication Design**](#3-grpc-communication-design).
+* For more information about the actual communication design and implementation go to [**gRPC Communication Design**](#3-grpc-communication-design) section.
+* Some services also use an event system using RabbitMQ, more informations about this design can be found in [**Event System**](#event-system-communication-design) section.
+
+#### 3. Server-to-Client communication
+
+* For *real time* features, like the Chat feature, SignalR event system is used, making the communications and synchronization instant between users.
+* More informations about this design and implementation can be found in [**SignalR System**]() section.
 
 ### 2. API Structure
 
@@ -124,9 +131,9 @@ It uses *HTTP2* for Service-to-Service communication exposing a **gRPC Server** 
 #### 3. gRPC Communication Design
 
 This design uses an atypical gRPC communication design with a *common response message*. The main features of this communication architecure are:
- * **Endpoint abstraction classes**: ```CampusEndpointBase``` & ```CampusEndpoint``` used to implement common parts of REST API Requests and and Responses using FastEndpoint NuGet Packedge.
+ * **Message abstraction classes**: ```CampusEndpointBase``` & ```CampusMessage<TReq, TRes>``` or ```CampusMessage<TReq>``` used to implement common parts of the gRPC Requests and Responses by implementing ```IRequestHandler<TReq, MessageResponse>``` interface for MediatR.
  * **Service middle ware class**: ```SerivceInterceptor``` inherits ```Interceptor``` class from Grpc.Core NuGet Packedge and is used to intercept any request, procces the response and handle any errors.
- * **MediatR pattern**: each service uses a mediator to send request, using this pattern every massage cand be implemented individually and be separated in levels of concern, this is also a dev friendly implementation that makes the code cleaner. This pattern comes with suplimentary logic to work, the request class needs to implement IRequest<MessageResponse> and the message class needs to implement IRequestHandler<TReq, MessageResponse>.
+ * **MediatR pattern**: each service uses a mediator to send request, using this pattern every massage cand be implemented individually and be separated in levels of concern, this is also a dev friendly implementation that makes the code cleaner. This pattern comes with suplimentary logic to work, the request class needs to implement ```IRequestBase``` and the message class needs to inherit from ```CampusMessage<TReq, MessageResponse>```.
 
 ##### 1. Common Messages Response
 
@@ -169,3 +176,51 @@ The communication path is show in the below diagram:
 
 * This communication represent the data path for between API Gataway and API, it also represents a simple two service communication and the ServiceInterceptor role as a middle ware system.
 
+#### 4. Event System Communication Design
+
+The event system provides a robust, asynchronous messaging infrastructure built on top of MassTransit and RabbitMQ. It utilizes a decoupled "Envelope" pattern to facilitate both fire-and-forget publishing and request-response patterns across microservices.
+
+* **Envelope Pattern**: Instead of sending raw objects, all messages are wrapped in an ```Envelope.cs```. This contains the EventType (routing key) and a Payload (JSON-serialized body). This abstraction allows the system to route messages dynamically without the transport layer needing deep knowledge of the underlying C# types.
+
+* **Message Abstraction**:
+	* **CampusConsumerBase<TResponse>**: The foundation for all consumers. It handles logging scopes (CorrelationId, RequestId), error handling, and automated response generation.
+	* **CampusConsumer<TResponse>**: Used for consumers that return a specific data type.
+	* **CampusConsumer**: A specialized version for "void" operations that returns an EmptyResponse.
+	* **Scoped Publisher**: The ScopedMessagePublisher ensures that messages are sent within a valid Dependency Injection scope. It supports:
+		* *Publish*: Standard async message distribution.
+  		* *SendAsync*: A request-response implementation that waits for a MessageResponse from the consumer.
+
+##### 1. Direct Routing & Topology
+
+The system uses a Direct Exchange strategy to ensure messages reach the correct specialized queues based on their intent:
+* **Attribute-Based Mapping**: Consumers are decorated with the ```[EnvelopeAttribute("EventName")]```.
+* **Automatic Registration**: The MassTransitExtension scans assemblies for these attributes and automatically configures RabbitMQ endpoints.
+* **Routing Keys**: The EventType in the Envelope serves as the routing key, ensuring the Direct Exchange delivers the message only to the bound queues.
+
+##### 2. Error Handling & Status Codes
+
+Similar to the gRPC implementation, the Event System uses specialized exceptions to maintain consistency across the architecture:
+* **Event-Specific Exceptions**: ```EventException.cs``` provides a suite of specialized exceptions (e.g., EventNotFoundException, EventValidationException).
+* **Automatic Response Mapping**:
+	* If a consumer is invoked via a Request/Response pattern (context.RequestId.HasValue), the base consumer catches these exceptions and converts them into a failed MessageResponse with the appropriate status code.
+	* If it is a Fire-and-Forget message, the exception is re-thrown to trigger standard MassTransit retry policies.
+
+##### 3. Communication path
+
+The communication path is show in the below diagram:
+
+<img width="861" height="381" alt="EventSystem (8)" src="https://github.com/user-attachments/assets/34e54fbc-2ccb-45b3-8400-7a6fc4ff843a" />
+
+#### 5. SignalR Communication Design
+The SignalR system provides real-time, bi-directional communication between the server and clients, integrated seamlessly with the event-driven architecture. It leverages a mapping system to track active user connections and specialized consumers to broadcast events to the UI.
+
+* **CampusHub<THub>**: A base Hub class that manages the connection lifecycle. It automatically extracts user identity from JWT claims and registers the active ConnectionId in the mapping system upon connection.
+* **Connection Tracking**: The IConnectionMapping<THub> and its implementation ConnectionMapping<THub> use a ConcurrentDictionary to keep track of multiple active connections per user. This allows the system to support a single user being logged in across multiple devices or browser tabs.
+* **The Notifier Pattern**: The INotifier<THub> interface abstracts the SignalR HubContext, providing high-level methods to send messages to specific users or groups without needing to manage raw connection IDs manually.
+
+##### 1. Event-to-SignalR Integration
+A key feature of this design is the ability to bridge backend events (MassTransit) directly to the frontend via SignalR:
+
+* **SignalRConsumer**: This is a specialized version of the CampusConsumer that has access to the INotifier and IConnectionMapping.
+* **Flow**: When a backend event is received, a SignalRConsumer can check if the target user is online using IsUserOnline(userId) and then push a real-time notification using the _notifier.
+* **ISignalRDefinition**: Used to standardize the structure of messages sent over the socket, ensuring that the Message name and Content payload remain consistent across different services.
