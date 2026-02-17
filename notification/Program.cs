@@ -81,8 +81,6 @@ builder.Services.AddMassTransit(x =>
     });
 });
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(NotificationService).Assembly));
-
 builder.Services.AddGrpc(options =>
 {
     options.Interceptors.Add<ServiceInterceptor>();
@@ -119,7 +117,6 @@ app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapGrpcService<NotificationService>();
 app.MapHub<ChatHub>("/hubs/chat");
 
 app.Run();

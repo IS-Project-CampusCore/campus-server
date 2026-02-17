@@ -66,3 +66,5 @@ nunit-*.xml
 *.userprefs
 
 /.vs/
+
+.env

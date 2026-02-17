@@ -48,7 +48,11 @@ builder.Services.AddMassTransit(x =>
 
 builder.Services.AddSingleton<IScopedMessagePublisher, ScopedMessagePublisher>();
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(ChatService).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(ChatService).Assembly);
+    cfg.LicenseKey = builder.Configuration["MediatR:LicenseKey"];
+});
 
 string connectionString = builder.Configuration["MongoDB:ConnectionString"]!;
 string databaseName = builder.Configuration["MongoDB:DatabaseName"]!;
