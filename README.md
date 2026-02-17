@@ -12,7 +12,8 @@ The actors and the use cases are sown in the diagram below:
 
 ## Installation
 
-//TO BE ADDED AFTER PROJECT IS FINISHED
+1. Install and run [**Docker Desktop**](https://www.docker.com/products/docker-desktop/).
+2. Run ```Start-CampusCore.bat```.
 
 ## Development & Debugging
 
@@ -93,16 +94,16 @@ This script automates the service creation process and integration by doing thos
 
 After the script runned succesfully you have your new service inside the project and can be used for implementation.
 
-### Server Architecture
+## Server Architecture
 
 This service uses a Microservices architecture structured as an API Gateway(http service) and API(the rest of services).
 
-#### 1. API Gateway Structure
+### 1. API Gateway Structure
 
 The **http service** aggregrates all the HTTP enpoints and expose them to the client app.
 It uses *HTTP1.1 Requests* for Client-to-Server communication and *HTTP2** for Service-to-Service communication.
 
-##### 1. Client-to-Server communication
+#### 1. Client-to-Server communication
 
 * As explained above, this communication uses **HTTP1.1** for *REST API* requests.
 * This project uses **FastEndpoints NuGet Packedge** for the endpoints aggregation.
@@ -110,12 +111,12 @@ It uses *HTTP1.1 Requests* for Client-to-Server communication and *HTTP2** for S
 
 * For debuging and testing the API Gateway you can use any API tasting tool like *Postman* or *Insomnia*.
 
-##### 2. Service-to-Service communication
+#### 2. Service-to-Service communication
 
 * The API Gateway does not expose any **gRPC Servers**, it is designed to be a **gRPC Client** for every service that has an endpoint implemented.
-* For more information about the actual communication design and implementation go to **gRPC Communication section**.
+* For more information about the actual communication design and implementation go to [**gRPC Communication Design**](#3-grpc-communication-design).
 
-#### 2. API Structure
+### 2. API Structure
 
 The API is composed from multiple **Microservices** with a **gRPC Communication** design.
 It uses *HTTP2* for Service-to-Service communication exposing a **gRPC Server** for each service and uses **gRPC Clients** to call other services.
